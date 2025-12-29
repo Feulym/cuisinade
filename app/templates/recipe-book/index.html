@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+
+{% block title %}Livre de recette{% endblock %}
+
+{% block header %}
+    <div class="header">
+        <div class="flex-between" style="align-items: flex-start;">
+            <div>
+                <h1>Livre de recette</h1>
+                <p class="header-subtitle">Collection de recettes</p>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+    <!-- Search Bar -->
+    <div class="search-filter-section">
+        <form method="get" action="{{ url_for('recipeBook.search_recipes') }}">
+            <div class="flex-between" style="gap: var(--spacing-md); align-items: center; flex-wrap: wrap;">
+                <div class="search-box">
+                    <i class="fa fa-search search-icon"></i>
+                    <input 
+                        type="text" 
+                        name="q" 
+                        class="form-control" 
+                        placeholder="Rechercher une recette par titre ou description..." 
+                    >
+                </div>
+                <div style="display: flex; gap: var(--spacing-sm);">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa fa-search"></i> Rechercher
+                    </button>
+                    <a href="{{ url_for('recipeBook.add_recipe') }}" class="btn btn-success">
+                        <i class="fa fa-plus"></i> Ajouter
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    {% if recipes %}
+        <div class="grid grid-auto">
+            {% for recipe in recipes %}
+                <a href="{{ url_for('recipeBook.see_recipe', id=recipe['id']) }}" style="text-decoration: none;">
+                    <div class="card recipe-card">
+                        <div class="card-header">
+                            <h3 style="margin: 0; color: var(--text-primary); display: inline;">{{ recipe["title"] }}</h3>
+                            <span class="text-secondary" style="font-size: 0.85em; display: inline;margin-left: 5px;">
+                                Par {{ recipe['username'] }}
+                            </span><br>
+                            <span class="difficulty-badge difficulty-{{ recipe['difficulty'] }}">
+                                {{ 'Facile' if recipe['difficulty'] == 1 else 'Moyen' if recipe['difficulty'] == 2 else 'Difficile' }}
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <p>{{ recipe["description"] }}</p>
+                            
+                            <!-- Recipe Meta -->
+                            <div class="recipe-meta">
+                                {% if recipe['prepTime'] and recipe['prepTime'] > 0 %}
+                                <span class="recipe-meta-item">
+                                    <i class="fa fa-clock-o"></i> {{ recipe['prepTime'] }} min
+                                </span>
+                                {% endif %}
+                                
+                                {% if recipe['cookTime'] and recipe['cookTime'] > 0 %}
+                                <span class="recipe-meta-item">
+                                    <i class="fa fa-fire"></i> {{ recipe['cookTime'] }} min
+                                </span>
+                                {% endif %}
+                                
+                                {% if recipe['servings'] and recipe['servings'] > 0 %}
+                                <span class="recipe-meta-item">
+                                    <i class="fa fa-users"></i> {{ recipe['servings'] }} pers.
+                                </span>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Star Rating -->
+                            <div style="margin-top: var(--spacing-sm);">
+                                {% for i in range(5) %}
+                                    {% if i < recipe["author_grade"] %}
+                                        <span class="fa fa-star checked"></span>
+                                    {% else %}
+                                        <span class="fa fa-star" style="color: var(--gray-300);"></span>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <span class="badge-primary">
+                                <i class="fa fa-book"></i> Voir la recette
+                            </span>
+                        </div>
+                    </div>
+                </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="card">
+            <div class="card-body text-center" style="padding: var(--spacing-xxl);">
+                <i class="fa fa-cutlery" style="font-size: 5em; color: var(--gray-400); margin-bottom: var(--spacing-lg);"></i>
+                {% if search_query %}
+                    <h2 class="text-muted">Aucune recette trouvée</h2>
+                    <p class="text-secondary" style="font-size: 1.1em; margin-top: var(--spacing-md); margin-bottom: var(--spacing-lg);">
+                        Essayez avec d'autres mots-clés ou ajoutez une nouvelle recette
+                    </p>
+                {% else %}
+                    <h2 class="text-muted">Aucune recette encore !</h2>
+                    <p class="text-secondary" style="font-size: 1.1em; margin-top: var(--spacing-md); margin-bottom: var(--spacing-lg);">
+                        N'hésitez pas à ajouter vos meilleures recettes
+                    </p>
+                {% endif %}
+                <a href="{{ url_for('recipeBook.add_recipe') }}" class="btn btn-primary btn-lg">
+                    <i class="fa fa-plus"></i> Ajouter votre première recette !
+                </a>
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}

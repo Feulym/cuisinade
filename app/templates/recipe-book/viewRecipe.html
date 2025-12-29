@@ -1,0 +1,467 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ recipe.title }}{% endblock %}
+
+{% block styles %}
+<style>
+/* Recipe-specific styles that complement the global stylesheet */
+.recipe-image {
+    width: 100%;
+    height: 300px;
+    object-fit: cover;
+    background: var(--gradient-subtle);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-lg);
+}
+
+@media (min-width: 768px) {
+    .recipe-image {
+        height: 400px;
+    }
+}
+
+.ingredients-list {
+    list-style: none;
+    display: grid;
+    gap: var(--spacing-md);
+}
+
+.ingredients-list li {
+    padding: var(--spacing-md);
+    background: var(--gray-50);
+    border-left: 4px solid var(--primary-color);
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-base);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    min-height: var(--touch-target-min);
+}
+
+.ingredients-list li input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    margin-right: var(--spacing-md);
+    cursor: pointer;
+}
+
+.ingredients-list li label {
+    flex: 1;
+    cursor: pointer;
+}
+
+.ingredients-list li:active {
+    background: var(--gray-100);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .ingredients-list li:hover {
+        background: var(--gray-100);
+        transform: translateX(5px);
+    }
+}
+
+.instructions-list {
+    list-style: none;
+    counter-reset: step-counter;
+}
+
+.instructions-list li {
+    counter-increment: step-counter;
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-md);
+    background: var(--gray-50);
+    border-radius: var(--radius-md);
+    position: relative;
+    padding-left: 70px;
+    line-height: 1.8;
+    min-height: var(--touch-target-min);
+}
+
+.instructions-list li::before {
+    content: counter(step-counter);
+    position: absolute;
+    left: var(--spacing-lg);
+    top: var(--spacing-lg);
+    background: var(--gradient-primary);
+    color: white;
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.recipe-meta {
+    display: flex;
+    gap: var(--spacing-md);
+    flex-wrap: wrap;
+    margin-top: var(--spacing-lg);
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    background: rgba(102, 126, 234, 0.1);
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: var(--radius-full);
+    min-height: 36px;
+    color: var(--text-primary);
+}
+
+.meta-item i {
+    color: var(--primary-color);
+    width: 20px;
+    text-align: center;
+}
+
+.author-section {
+    background: var(--gray-50);
+    padding: var(--spacing-lg);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-lg);
+}
+
+.comments-section {
+    margin-top: var(--spacing-xxl);
+}
+
+.comment-card {
+    background: var(--gray-50);
+    padding: var(--spacing-lg);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-md);
+    border-left: 3px solid var(--primary-color);
+}
+
+.comment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-sm);
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+}
+
+.comment-author {
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.comment-stars {
+    color: #F79426;
+}
+
+.comment-date {
+    font-size: 0.85em;
+    color: var(--text-secondary);
+}
+
+.add-comment-form {
+    background: var(--white);
+    border: 2px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-lg);
+    margin-top: var(--spacing-lg);
+}
+
+.star-rating-display {
+    display: inline-flex;
+    gap: 2px;
+}
+
+/* Star Rating Input for Comments */
+.comment-rating {
+    display: flex;
+    flex-direction: row-reverse;
+    justify-content: flex-end;
+    gap: var(--spacing-xs);
+    margin: var(--spacing-md) 0;
+}
+
+.comment-rating input {
+    display: none;
+}
+
+.comment-rating label {
+    cursor: pointer;
+    font-size: 1.5em;
+    color: var(--gray-300);
+    transition: color var(--transition-fast);
+}
+
+.comment-rating label:before {
+    content: "★";
+}
+
+.comment-rating input:checked ~ label,
+.comment-rating label:hover,
+.comment-rating label:hover ~ label {
+    color: #F79426;
+}
+
+.favorite-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.favorite-btn.favorited {
+    background: var(--danger);
+    color: var(--white)
+}
+
+.favorite-btn.favorited:hover {
+    background: #c82333;
+    color: var(--white)
+}
+</style>
+{% endblock %}
+
+{% block header %}
+    <div class="header">
+        <div class="flex-between" style="align-items: flex-start;">
+            <div style="flex: 1;">
+                <h1>{{ recipe.title }}</h1>
+                <div class="recipe-meta">
+                    {% if recipe.prepTime %}
+                    <div class="meta-item" style="background: rgba(255,255,255, 0.6);">
+                        <i class="fa fa-clock-o"></i>
+                        <span>Prep: {{ recipe.prepTime }} min</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if recipe.cookTime %}
+                    <div class="meta-item" style="background: rgba(255,255,255, 0.6);">
+                        <i class="fa fa-fire"></i>
+                        <span>Cuisson: {{ recipe.cookTime }} min</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if recipe.servings %}
+                    <div class="meta-item" style="background: rgba(255,255,255, 0.6);">
+                        <i class="fa fa-users"></i>
+                        <span>{{ recipe.servings }} portions</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if recipe.difficulty %}
+                    <div class="meta-item" style="background: rgba(255,255,255, 0.6);">
+                        <i class="fa fa-signal"></i>
+                        <span>
+                            {% if recipe.difficulty == 1 %}Facile
+                            {% elif recipe.difficulty == 2 %}Moyen
+                            {% elif recipe.difficulty == 3 %}Difficile
+                            {% endif %}
+                        </span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if recipe.author_grade %}
+                    <div class="meta-item" style="background: rgba(255,255,255, 0.6);">
+                        <i class="fa fa-star" style="color: #F79426;"></i>
+                        <span>{{ recipe.author_grade }}/5</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+    <!-- Author Info -->
+    <div class="author-section">
+        <div class="flex-between">
+            <div>
+                <p class="text-secondary" style="margin: 0;">
+                    <i class="fa fa-user"></i> Recette par <strong>{{ recipe.username }}</strong>
+                </p>
+                <p class="text-muted" style="font-size: 0.85em; margin: var(--spacing-xs) 0 0 0;">
+                    <i class="fa fa-calendar"></i> Ajoutée le {{ recipe.added.strftime('%B %d, %Y') }}
+                </p>
+            </div>
+            {% if g.user %}
+            <form method="post" action="{{ url_for('recipeBook.toggle_favourite', id=recipe.id) }}" style="margin: 0;">
+                <button type="submit" class="btn btn-secondary favorite-btn {% if isFavourite %}favorited{% endif %}">
+                    <i class="fa fa-heart"></i>
+                    {% if isFavourite %}Retirer des favoris{% else %}Ajouter au favoris{% endif %}
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Recipe Image (if you add images later) -->
+    {% if recipe.image_url %}
+    <img src="{{ recipe.image_url }}" alt="{{ recipe.title }}" class="recipe-image">
+    {% endif %}
+
+    <!-- Description -->
+    {% if recipe.description %}
+    <div class="section">
+        <h2><i class="fa fa-align-left"></i> Description</h2>
+        <p style="font-size: 1.1em; line-height: 1.8; color: var(--text-primary);">{{ recipe.description }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Ingredients -->
+    {% if ingredients %}
+    <div class="section">
+        <h2><i class="fa fa-shopping-basket"></i> Ingredients</h2>
+        <ul class="ingredients-list">
+            {% for ingredient in ingredients %}
+            <li>
+                <input type="checkbox" id="ingredient-{{ loop.index }}">
+                <label for="ingredient-{{ loop.index }}">
+                    {{ ingredient.name }} - {{ ingredient.quantity }} {{ ingredient.unit }} 
+                </label>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <!-- Instructions -->
+    {% if instructions %}
+    <div class="section">
+        <h2><i class="fa fa-list-ol"></i> Instructions</h2>
+        <ol class="instructions-list">
+            {% for instruction in instructions %}
+            <li>{{ instruction.instruction }}</li>
+            {% endfor %}
+        </ol>
+    </div>
+    {% endif %}
+
+    <!-- Notes du chefs -->
+    {% if recipe.notes %}
+    <div class="section">
+        <h2><i class="fa fa-align-left"></i> Notes du Chef</h2>
+        <p style="font-size: 1.1em; line-height: 1.8; color: var(--text-primary);">{{ recipe.notes }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Comments Section -->
+    <div class="comments-section">
+        <h2><i class="fa fa-comments"></i> Commentaires ({{ comments|length }})</h2>
+        
+        <!-- Add Comment Form (only if logged in) -->
+        {% if g.user %}
+        <div class="add-comment-form">
+            <h3 style="margin-bottom: var(--spacing-md);">Ajouter un commentaire</h3>
+            <form method="post" action="{{ url_for('recipeBook.add_comment', id=recipe.id) }}">
+                <div class="form-group">
+                    <label class="form-label">Évaluation</label>
+                    <div class="comment-rating">
+                        <input type="radio" id="comment-star5" name="grade" value="5" required />
+                        <label for="comment-star5" title="5 stars"></label>
+                        <input type="radio" id="comment-star4" name="grade" value="4" />
+                        <label for="comment-star4" title="4 stars"></label>
+                        <input type="radio" id="comment-star3" name="grade" value="3" />
+                        <label for="comment-star3" title="3 stars"></label>
+                        <input type="radio" id="comment-star2" name="grade" value="2" />
+                        <label for="comment-star2" title="2 stars"></label>
+                        <input type="radio" id="comment-star1" name="grade" value="1" />
+                        <label for="comment-star1" title="1 star"></label>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="comment" class="form-label">Votre commentaire</label>
+                    <textarea name="comment" id="comment" class="form-control" rows="4" placeholder="Share your thoughts about this recipe..." required></textarea>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa fa-paper-plane"></i> Ajouter votre commentaire
+                </button>
+            </form>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            <a href="{{ url_for('auth.login') }}">Connectez-vous</a> pour laisser un commentaire !
+        </div>
+        {% endif %}
+
+        <!-- Display Comments -->
+        {% if comments %}
+        <div style="margin-top: var(--spacing-xl);">
+            {% for comment in comments %}
+            <div class="comment-card">
+                <div class="comment-header">
+                    <div style="display: flex; align-items: center; gap: var(--spacing-sm); flex-wrap: wrap;">
+                        <span class="comment-author">
+                            <i class="fa fa-user-circle"></i> {{ comment.username }}
+                        </span>
+                        <span class="comment-stars">
+                            {% for i in range(5) %}
+                                {% if i < comment.grade %}
+                                    <i class="fa fa-star"></i>
+                                {% else %}
+                                    <i class="fa fa-star-o"></i>
+                                {% endif %}
+                            {% endfor %}
+                        </span>
+                    </div>
+                    
+                    <!-- Delete button - this will be pushed to the right -->
+                    {% if g.user and g.user['id'] == comment.author_id %}
+                    <form method="post" action="{{ url_for('recipeBook.delete_comment', id=recipe.id, cid=comment.id) }}" style="margin: 0;" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce commentaire ?');">
+                        <button type="submit" class="btn btn-sm btn-danger" style="padding: var(--spacing-xs) var(--spacing-sm);">
+                            <i class="fa fa-trash"></i>
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+                <p style="margin: var(--spacing-sm) 0 0 0; line-height: 1.6;">{{ comment.comment }}</p>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted" style="margin-top: var(--spacing-lg);">
+            <i class="fa fa-comment-o"></i> Aucun commentaire pour le moment. Soyez le premier à participer !
+        </p>
+        {% endif %}
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="flex gap-md" style="flex-wrap: wrap; margin-top: var(--spacing-xxl); padding-top: var(--spacing-xl); border-top: 2px solid var(--gray-200);">
+        {% if g.user and g.user['id'] == recipe.author_id %}
+        <a href="{{ url_for('recipeBook.edit_recipe', id=recipe.id) }}" class="btn btn-primary">
+            <i class="fa fa-edit"></i>  Modifier la recette
+        </a>
+        <form method="post" action="{{ url_for('recipeBook.delete_recipe', id=recipe.id) }}" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this recipe?');">
+            <button type="submit" class="btn btn-danger">
+                <i class="fa fa-trash"></i>  Supprimer la recette
+            </button>
+        </form>
+        {% endif %}
+        <button onclick="window.print()" class="btn btn-secondary">
+            <i class="fa fa-print"></i>  Imprimer la recette
+        </button>
+        <a href="{{ url_for('recipeBook.index') }}" class="btn btn-secondary">
+            <i class="fa fa-arrow-left"></i>  Retour à la liste des recettes
+        </a>
+    </div>
+
+    <script>
+        // Save checkbox states in memory
+        const checkboxStates = {};
+        const checkboxes = document.querySelectorAll('.ingredients-list input[type="checkbox"]');
+        const recipeId = '{{ recipe.id }}';
+        
+        checkboxes.forEach((checkbox, index) => {
+            checkbox.addEventListener('change', function() {
+                checkboxStates[`recipe_${recipeId}_ingredient_${index}`] = this.checked;
+            });
+        });
+
+        // Print styles
+        window.addEventListener('beforeprint', function() {
+            document.body.style.background = 'white';
+        });
+    </script>
+{% endblock %}

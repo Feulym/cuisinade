@@ -1,0 +1,286 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ recipe.title }}{% endblock %}
+
+{% block styles %}
+<style>
+/* Recipe-specific styles that complement the global stylesheet */
+.recipe-image {
+    width: 100%;
+    height: 300px;
+    object-fit: cover;
+    background: var(--gradient-subtle);
+}
+
+@media (min-width: 768px) {
+    .recipe-image {
+        height: 400px;
+    }
+}
+
+.ingredients-list {
+    list-style: none;
+    display: grid;
+    gap: var(--spacing-md);
+}
+
+.ingredients-list li {
+    padding: var(--spacing-md);
+    background: var(--gray-50);
+    border-left: 4px solid var(--primary-color);
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-base);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    min-height: var(--touch-target-min);
+}
+
+.ingredients-list li input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    margin-right: var(--spacing-md);
+    cursor: pointer;
+}
+
+.ingredients-list li:active {
+    background: var(--gray-100);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .ingredients-list li:hover {
+        background: var(--gray-100);
+        transform: translateX(5px);
+    }
+}
+
+.instructions-list {
+    list-style: none;
+    counter-reset: step-counter;
+}
+
+.instructions-list li {
+    counter-increment: step-counter;
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-md);
+    background: var(--gray-50);
+    border-radius: var(--radius-md);
+    position: relative;
+    padding-left: 70px;
+    line-height: 1.8;
+    min-height: var(--touch-target-min);
+}
+
+.instructions-list li::before {
+    content: counter(step-counter);
+    position: absolute;
+    left: var(--spacing-lg);
+    top: var(--spacing-lg);
+    background: var(--gradient-primary);
+    color: white;
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.recipe-meta {
+    display: flex;
+    gap: var(--spacing-md);
+    flex-wrap: wrap;
+    margin-top: var(--spacing-lg);
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    background: rgba(255, 255, 255, 0.2);
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: var(--radius-full);
+    backdrop-filter: blur(10px);
+    min-height: 36px;
+}
+
+.meta-item svg {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.nutritional-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: var(--spacing-md);
+}
+
+.nutrition-item {
+    background: var(--gray-50);
+    padding: var(--spacing-lg);
+    border-radius: var(--radius-md);
+    text-align: center;
+}
+
+.nutrition-item .value {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+.nutrition-item .label {
+    font-size: 0.9em;
+    color: var(--text-secondary);
+    margin-top: var(--spacing-xs);
+}
+</style>
+{% endblock %}
+
+{% block header %}
+    <div class="header">
+        <h1>{{ recipe.title }}</h1>
+        <div class="recipe-meta">
+            {% if recipe.prep_time %}
+            <div class="meta-item">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Temps de préparation : {{ recipe.prep_time }} min</span>
+            </div>
+            {% endif %}
+            
+            {% if recipe.cook_time %}
+            <div class="meta-item">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
+                </svg>
+                <span>Cuisson : {{ recipe.cook_time }} min</span>
+            </div>
+            {% endif %}
+            
+            {% if recipe.servings %}
+            <div class="meta-item">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                <span>Nombre de personnes : {{ recipe.servings }}</span>
+            </div>
+            {% endif %}
+            
+            {% if recipe.difficulty %}
+            <div class="meta-item">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                <span>{{ recipe.difficulty }}</span>
+            </div>
+            {% endif %}
+            
+            {% if recipe.grade %}
+            <div class="meta-item">
+                <i class="fa fa-star" style="color: #F79426;"></i>
+                <span>{{ recipe.grade }}/5</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+    <!-- Recipe Image -->
+    {% if recipe.image_url %}
+    <img src="{{ recipe.image_url }}" alt="{{ recipe.title }}" class="recipe-image">
+    {% endif %}
+
+    <div class="mt-5">
+        <!-- Description -->
+        {% if recipe.description %}
+        <div class="section">
+            <h2>Description</h2>
+            <p style="font-size: 1.1em; line-height: 1.8; color: var(--text-secondary);">{{ recipe.description }}</p>
+        </div>
+        {% endif %}
+
+        <!-- Tags -->
+        {% if recipe.tags %}
+        <div class="section">
+            <h2>Categories</h2>
+            <div class="flex gap-sm" style="flex-wrap: wrap;">
+                {% for tag in recipe.tags %}
+                <span class="tag">{{ tag }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Ingredients -->
+        {% if recipe.ingredients %}
+        <div class="section">
+            <h2>Ingredients</h2>
+            <ul class="ingredients-list">
+                {% for ingredient in recipe.ingredients %}
+                <li>
+                    <input type="checkbox" id="ingredient-{{ loop.index }}">
+                    <label for="ingredient-{{ loop.index }}" style="cursor: pointer; flex: 1;">{{ ingredient }}</label>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <!-- Instructions -->
+        {% if recipe.instructions %}
+        <div class="section">
+            <h2>Instructions</h2>
+            <ol class="instructions-list">
+                {% for instruction in recipe.instructions %}
+                <li>{{ instruction }}</li>
+                {% endfor %}
+            </ol>
+        </div>
+        {% endif %}
+
+        <!-- Notes -->
+        {% if recipe.notes %}
+        <div class="section">
+            <h2>Notes du chef</h2>
+            <p style="font-size: 1.1em; line-height: 1.8; color: var(--text-secondary);">{{ recipe.notes }}</p>
+        </div>
+        {% endif %}
+
+        <!-- Action Buttons -->
+        <div class="flex gap-md" style="flex-wrap: wrap; margin-top: var(--spacing-xl);">
+            {% if recipe.id %}
+            <a href="{{ url_for('recipeBook.edit_recipe', id=recipe.id) }}" class="btn btn-primary">
+                <i class="fa fa-edit"></i> Modifier la recette
+            </a>
+            {% endif %}
+            <button onclick="window.print()" class="btn btn-secondary">
+                <i class="fa fa-print"></i> Imprimer la recette
+            </button>
+            <a href="{{ url_for('recipeBook.index') }}" class="btn btn-secondary">
+                <i class="fa fa-arrow-left"></i> Retour aux recettes
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // Save checkbox states in memory (not localStorage as per requirements)
+        const checkboxStates = {};
+        const checkboxes = document.querySelectorAll('.ingredients-list input[type="checkbox"]');
+        const recipeId = '{{ recipe.id }}';
+        
+        checkboxes.forEach((checkbox, index) => {
+            checkbox.addEventListener('change', function() {
+                checkboxStates[`recipe_${recipeId}_ingredient_${index}`] = this.checked;
+            });
+        });
+
+        // Print styles
+        window.addEventListener('beforeprint', function() {
+            document.body.style.background = 'white';
+        });
+    </script>
+{% endblock %}

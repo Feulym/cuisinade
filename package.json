@@ -1,0 +1,29 @@
+{
+  "name": "cuisinade",
+  "version": "0.0.1",
+  "description": "App-livre de recette",
+  "main": "index.js",
+  "scripts": {
+    "dev": "flask --app app run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Feulym/Nexpy.git"
+  },
+  "keywords": [
+    "cuisinade",
+    "pwa",
+    "recipebook",
+    "family",
+    "date"
+  ],
+  "author": "Milo Dervieux (Feulym)",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Feulym/Nexpy/issues"
+  },
+  "homepage": "https://github.com/Feulym/Nexpy#readme",
+  "dependencies": {
+    "tailwindcss": "^4.1.17"
+  }
+}

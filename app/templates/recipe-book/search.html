@@ -1,0 +1,383 @@
+{% extends 'base.html' %}
+
+{% block title %}Recherche de recettes{% endblock %}
+
+{% block header %}
+<div class="header">
+    <h1><i class="fa fa-search"></i> Recherche de recettes</h1>
+    <p class="header-subtitle">Trouvez la recette parfaite</p>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Search Box -->
+<div class="search-header">
+    <form method="get" action="{{ url_for('recipeBook.search_recipes') }}" id="searchForm">
+        <div class="search-box-large">
+            <i class="fa fa-search search-icon"></i>
+            <input 
+                type="text" 
+                name="q" 
+                class="form-control" 
+                placeholder="Rechercher par titre ou description..." 
+                value="{{ search_query or '' }}"
+                autofocus
+            >
+        </div>
+        
+        <!-- Filters Section -->
+        <div class="filters-section">
+            <h3 style="margin-bottom: var(--spacing-lg); color: var(--text-primary);">
+                <i class="fa fa-filter"></i> Filtres avancés
+            </h3>
+            
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label class="filter-label">
+                        <i class="fa fa-signal"></i> Difficulté
+                    </label>
+                    <select name="difficulty" class="form-control">
+                        <option value="">Toutes</option>
+                        <option value="1" {{ 'selected' if difficulty == '1' }}>Facile</option>
+                        <option value="2" {{ 'selected' if difficulty == '2' }}>Moyenne</option>
+                        <option value="3" {{ 'selected' if difficulty == '3' }}>Difficile</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label class="filter-label">
+                        <i class="fa fa-clock-o"></i> Temps de préparation max
+                    </label>
+                    <input 
+                        type="number" 
+                        name="max_prep_time" 
+                        class="form-control" 
+                        placeholder="Ex: 30"
+                        min="0"
+                        value="{{ max_prep_time or '' }}"
+                    >
+                </div>
+                
+                <div class="filter-group">
+                    <label class="filter-label">
+                        <i class="fa fa-fire"></i> Temps de cuisson max
+                    </label>
+                    <input 
+                        type="number" 
+                        name="max_cook_time" 
+                        class="form-control" 
+                        placeholder="Ex: 60"
+                        min="0"
+                        value="{{ max_cook_time or '' }}"
+                    >
+                </div>
+                <!--
+                <div class="filter-group">
+                    <label class="filter-label">
+                        <i class="fa fa-users"></i> Nombre de personnes min
+                    </label>
+                    <input 
+                        type="number" 
+                        name="min_servings" 
+                        class="form-control" 
+                        placeholder="Ex: 4"
+                        min="1"
+                        value="{{ min_servings or '' }}"
+                    >
+                </div>
+                -->
+                
+                <div class="filter-group">
+                    <label class="filter-label">
+                        <i class="fa fa-star"></i> Note minimale
+                    </label>
+                    <select name="min_rating" class="form-control">
+                        <option value="">Toutes</option>
+                        <option value="5" {{ 'selected' if min_rating == '5' }}>5 étoiles</option>
+                        <option value="4" {{ 'selected' if min_rating == '4' }}>4+ étoiles</option>
+                        <option value="3" {{ 'selected' if min_rating == '3' }}>3+ étoiles</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: var(--spacing-sm); margin-top: var(--spacing-lg); flex-wrap: wrap;">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa fa-search"></i> Rechercher
+                </button>
+                <a href="{{ url_for('recipeBook.search_recipes') }}" class="btn btn-secondary">
+                    <i class="fa fa-times"></i> Réinitialiser
+                </a>
+                <a href="{{ url_for('recipeBook.index') }}" class="btn btn-secondary">
+                    <i class="fa fa-home"></i> Retour
+                </a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Active Filters Display -->
+{% if search_query or difficulty or max_prep_time or max_cook_time or min_servings or min_rating %}
+<div class="active-filters">
+    <span style="font-weight: 600; color: var(--text-secondary);">Filtres actifs :</span>
+    
+    {% if search_query %}
+    <span class="active-filter-tag">
+        Recherche: "{{ search_query }}"
+        <i class="fa fa-times" onclick="removeFilter('q')"></i>
+    </span>
+    {% endif %}
+    
+    {% if difficulty %}
+    <span class="active-filter-tag">
+        Difficulté: {{ 'Facile' if difficulty == '1' else 'Moyenne' if difficulty == '2' else 'Difficile' }}
+        <i class="fa fa-times" onclick="removeFilter('difficulty')"></i>
+    </span>
+    {% endif %}
+    
+    {% if max_prep_time %}
+    <span class="active-filter-tag">
+        Préparation ≤ {{ max_prep_time }} min
+        <i class="fa fa-times" onclick="removeFilter('max_prep_time')"></i>
+    </span>
+    {% endif %}
+    
+    {% if max_cook_time %}
+    <span class="active-filter-tag">
+        Cuisson ≤ {{ max_cook_time }} min
+        <i class="fa fa-times" onclick="removeFilter('max_cook_time')"></i>
+    </span>
+    {% endif %}
+    
+    {% if min_servings %}
+    <span class="active-filter-tag">
+        {{ min_servings }}+ personnes
+        <i class="fa fa-times" onclick="removeFilter('min_servings')"></i>
+    </span>
+    {% endif %}
+    
+    {% if min_rating %}
+    <span class="active-filter-tag">
+        {{ min_rating }}+ étoiles
+        <i class="fa fa-times" onclick="removeFilter('min_rating')"></i>
+    </span>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- Results Header -->
+<div class="results-header">
+    <div class="results-count">
+        {% if search_query or difficulty or max_prep_time or max_cook_time or min_servings or min_rating %}
+            <i class="fa fa-info-circle"></i>
+            <strong id="resultCount">{{ total_results }}</strong> résultat<span id="resultPlural">{{ 's' if total_results > 1 else '' }}</span> trouvé<span id="foundPlural">{{ 's' if total_results > 1 else '' }}</span>
+        {% else %}
+            <i class="fa fa-book"></i> Explorez toutes les recettes
+        {% endif %}
+    </div>
+    
+    {% if recipes %}
+    <div class="sort-controls">
+        <label for="sortSelect"><i class="fa fa-sort"></i> Trier par :</label>
+        <select id="sortSelect" class="form-control" style="width: auto; min-width: 180px;">
+            <option value="recent">Plus récentes</option>
+            <option value="rating">Mieux notées</option>
+            <option value="time">Plus rapides</option>
+            <option value="title">Ordre alphabétique</option>
+        </select>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Results Grid -->
+{% if recipes %}
+    <div class="grid grid-auto" id="recipesGrid">
+        {% for recipe in recipes %}
+            <a href="{{ url_for('recipeBook.see_recipe', id=recipe['id']) }}" style="text-decoration: none;">
+                <div class="card recipe-card" 
+                     data-title="{{ recipe['title'] }}"
+                     data-rating="{{ recipe['author_grade'] }}"
+                     data-time="{{ (recipe['prepTime'] or 0) + (recipe['cookTime'] or 0) }}"
+                     data-date="{{ recipe['added'] }}">
+                    <div class="card-header">
+                        <h3 style="margin: 0; color: var(--text-primary);">{{ recipe["title"] }}</h3>
+                        <span class="difficulty-badge difficulty-{{ recipe['difficulty'] }}">
+                            {{ 'Facile' if recipe['difficulty'] == 1 else 'Moyen' if recipe['difficulty'] == 2 else 'Difficile' }}
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <p>{{ recipe["description"] }}</p>
+                        
+                        <!-- Recipe Meta -->
+                        <div class="recipe-meta">
+                            {% if recipe['prepTime'] and recipe['prepTime'] > 0 %}
+                            <span class="recipe-meta-item">
+                                <i class="fa fa-clock-o"></i> {{ recipe['prepTime'] }} min
+                            </span>
+                            {% endif %}
+                            
+                            {% if recipe['cookTime'] and recipe['cookTime'] > 0 %}
+                            <span class="recipe-meta-item">
+                                <i class="fa fa-fire"></i> {{ recipe['cookTime'] }} min
+                            </span>
+                            {% endif %}
+                            
+                            {% if recipe['servings'] and recipe['servings'] > 0 %}
+                            <span class="recipe-meta-item">
+                                <i class="fa fa-users"></i> {{ recipe['servings'] }} pers.
+                            </span>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Star Rating -->
+                        <div style="margin-top: var(--spacing-sm);">
+                            {% for i in range(5) %}
+                                {% if i < recipe["author_grade"] %}
+                                    <span class="fa fa-star checked"></span>
+                                {% else %}
+                                    <span class="fa fa-star" style="color: var(--gray-300);"></span>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <span class="badge-primary">
+                            <i class="fa fa-book"></i> Voir la recette
+                        </span>
+                        <span class="text-secondary" style="font-size: 0.85em;">
+                            Par {{ recipe['username'] }}
+                        </span>
+                    </div>
+                </div>
+            </a>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="card">
+        <div class="card-body text-center" style="padding: var(--spacing-xxl);">
+            <i class="fa fa-search" style="font-size: 5em; color: var(--gray-400); margin-bottom: var(--spacing-lg);"></i>
+            <h2 class="text-muted">Aucune recette trouvée</h2>
+            <p class="text-secondary" style="font-size: 1.1em; margin-top: var(--spacing-md); margin-bottom: var(--spacing-lg);">
+                {% if search_query or difficulty or max_prep_time or max_cook_time or min_servings or min_rating %}
+                    Essayez de modifier vos critères de recherche ou ajoutez une nouvelle recette
+                {% else %}
+                    Commencez par ajouter votre première recette
+                {% endif %}
+            </p>
+            <div style="display: flex; gap: var(--spacing-sm); justify-content: center; flex-wrap: wrap;">
+                <a href="{{ url_for('recipeBook.search_recipes') }}" class="btn btn-secondary">
+                    <i class="fa fa-refresh"></i> Réinitialiser les filtres
+                </a>
+                <a href="{{ url_for('recipeBook.add_recipe') }}" class="btn btn-primary">
+                    <i class="fa fa-plus"></i> Ajouter une recette
+                </a>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+<script>
+// Store all recipe data for sorting
+let allRecipes = [];
+
+// Function to remove a specific filter
+function removeFilter(filterName) {
+    const form = document.getElementById('searchForm');
+    const input = form.querySelector(`[name="${filterName}"]`);
+    if (input) {
+        if (input.type === 'text' || input.type === 'number') {
+            input.value = '';
+        } else if (input.tagName === 'SELECT') {
+            input.value = '';
+        }
+    }
+    form.submit();
+}
+
+// Submit form on Enter key in search box
+document.querySelector('input[name="q"]').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('searchForm').submit();
+    }
+});
+
+// Initialize recipes data and sorting
+document.addEventListener('DOMContentLoaded', function() {
+    const recipesGrid = document.getElementById('recipesGrid');
+    const sortSelect = document.getElementById('sortSelect');
+    
+    if (!recipesGrid || !sortSelect) return;
+    
+    // Store all recipe cards with their data
+    const recipeCards = Array.from(recipesGrid.querySelectorAll('.recipe-card'));
+    allRecipes = recipeCards.map(card => ({
+        element: card.parentElement, // Store the <a> wrapper
+        title: card.dataset.title || '',
+        rating: parseInt(card.dataset.rating) || 0,
+        time: parseInt(card.dataset.time) || 0,
+        date: card.dataset.date || ''
+    }));
+    
+    // Sort function
+    function sortRecipes(sortType) {
+        let sortedRecipes = [...allRecipes];
+        
+        switch(sortType) {
+            case 'rating':
+                sortedRecipes.sort((a, b) => {
+                    if (b.rating !== a.rating) {
+                        return b.rating - a.rating; // Higher rating first
+                    }
+                    return new Date(b.date) - new Date(a.date); // Then by date
+                });
+                break;
+                
+            case 'time':
+                sortedRecipes.sort((a, b) => {
+                    if (a.time !== b.time) {
+                        return a.time - b.time; // Lower time first
+                    }
+                    return new Date(b.date) - new Date(a.date); // Then by date
+                });
+                break;
+                
+            case 'title':
+                sortedRecipes.sort((a, b) => {
+                    return a.title.localeCompare(b.title, 'fr', { sensitivity: 'base' });
+                });
+                break;
+                
+            case 'recent':
+            default:
+                sortedRecipes.sort((a, b) => {
+                    return new Date(b.date) - new Date(a.date); // Most recent first
+                });
+                break;
+        }
+        
+        // Clear and re-append in new order
+        recipesGrid.innerHTML = '';
+        sortedRecipes.forEach(recipe => {
+            recipesGrid.appendChild(recipe.element);
+        });
+        
+        // Add smooth fade-in animation
+        recipesGrid.style.opacity = '0';
+        setTimeout(() => {
+            recipesGrid.style.transition = 'opacity 0.3s ease';
+            recipesGrid.style.opacity = '1';
+        }, 10);
+    }
+    
+    // Listen for sort changes
+    sortSelect.addEventListener('change', function() {
+        sortRecipes(this.value);
+    });
+    
+    // Set initial sort from URL if present
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialSort = urlParams.get('sort') || 'recent';
+    sortSelect.value = initialSort;
+});
+</script>
+{% endblock %}

@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block title %}Inscription{% endblock %}
+{% block header %}
+<div class="header">
+    <h1>Inscription</h1>
+    <p class="header-subtitle">Créez votre compte Cuisinade</p>
+</div>
+{% endblock %}
+{% block content %}
+<div style="max-width: 500px; margin: var(--spacing-xl) auto;">
+    <div class="card">
+        <div class="card-body">
+            <form method="post">
+                <div class="form-group">
+                    <label for="username" class="form-label">Nom d'utilisateur</label>
+                    <input type="text" name="username" id="username" class="form-control" placeholder="Choisissez un nom d'utilisateur" required>
+                    <small class="form-text">Choisissez un nom d'utilisateur unique</small>
+                </div>
+                <div class="form-group">
+                    <label for="password" class="form-label">Mot de passe</label>
+                    <input type="password" name="password" id="password" class="form-control" placeholder="Créez un mot de passe fort" required>
+                    <small class="form-text">Au moins 6 caractères recommandés</small>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">
+                    <i class="fa fa-user-plus"></i> Créer un compte
+                </button>
+            </form>
+        </div>
+        <div class="card-footer text-center">
+            <p class="text-secondary">Vous avez déjà un compte ? <a href="{{ url_for('auth.login') }}">Connectez-vous ici</a></p>
+        </div>
+    </div>
+</div>
+{% endblock %}
