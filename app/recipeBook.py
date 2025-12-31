@@ -83,14 +83,22 @@ def add_recipe():
                 unit = request.form.get(f'ingredients[{i}][unit]')
                 
                 if ing_name and quantity and unit:
+                    # Check if ingredient already exists (case-insensitive)
+                    existing = db.execute(
+                        'SELECT id, name FROM ingredient_type WHERE LOWER(name) = LOWER(?)',
+                        (ing_name,)
+                    ).fetchone()
+        
                     # If ingredient doesn't exist in DB, create it first
-                    if not ing_id or ing_id == '' or ing_id == 'null':
+                    if (not ing_id or ing_id == '' or ing_id == 'null') and not existing:
                         print(f"Creating new ingredient: {ing_name}")
                         cursor = db.execute(
                             'INSERT INTO ingredient_type (name, image_url) VALUES (?, ?)',
                             (ing_name, '/static/images/default-ingredient.jpg')
                         )
                         ing_id = cursor.lastrowid
+                    else :
+                        ing_id = existing["id"]
                     
                     print(f"Inserting ingredient: recipe_id={recipe_id}, ingredient_id={ing_id}, quantity={quantity}, unit={unit}")
                     db.execute(
@@ -173,7 +181,7 @@ def get_recipe(id, check_author=True):
 
 def get_comments(id):
     querry = """
-        SELECT c.id, c.author_id, u.username, c.comment, c.grade
+        SELECT c.id, c.author_id, u.username, c.comment, c.grade, c.image_url
          FROM comments c 
          JOIN recipes r ON c.recipe_id = r.id
          JOIN user u ON c.author_id = u.id
@@ -218,7 +226,7 @@ def delete_comment(id, cid):
     
     # Get the comment to check ownership
     comment = db.execute(
-        "SELECT author_id FROM comments WHERE id = ?",
+        "SELECT author_id, image_url FROM comments WHERE id = ?",
         (cid,)
     ).fetchone()
     
@@ -230,6 +238,11 @@ def delete_comment(id, cid):
     if comment['author_id'] != g.user["id"]:
         abort(403, "You don't have permission to delete this comment.")
     
+    print("DEBUG DELETE IMAGE: ", comment['image_url'])
+    if comment['image_url'] :
+        # Delete the comment
+        delete_image(comment['image_url'])
+
     # Delete the comment
     db.execute(
         "DELETE FROM comments WHERE id = ?",
@@ -307,9 +320,15 @@ def edit_recipe(id):
                     quantity = request.form.get(f'ingredients[{i}][quantity]')
                     unit = request.form.get(f'ingredients[{i}][unit]')
                     
+                    # Check if ingredient already exists (case-insensitive)
+                    existing = db.execute(
+                        'SELECT id, name FROM ingredient_type WHERE LOWER(name) = LOWER(?)',
+                        (ing_name,)
+                    ).fetchone()
+
                     if ing_name and quantity and unit:
                         # Create ingredient type if it's new
-                        if not ing_id or ing_id == '' or ing_id == 'null':
+                        if not existing and (not ing_id or ing_id == '' or ing_id == 'null'):
                             cursor = db.execute(
                                 'INSERT INTO ingredient_type (name, image_url) VALUES (?, ?)',
                                 (ing_name, '/static/images/default-ingredient.jpg')

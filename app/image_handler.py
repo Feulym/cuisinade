@@ -67,9 +67,9 @@ def save_image(file, upload_folder, optimize=True):
 
 def delete_image(image_url):
     """Supprime une image du serveur"""
-    if image_url:
+    filepath = image_url.replace('../', 'app/')
+    if filepath:
         try:
-            filepath = os.path.join('static', image_url.lstrip('/'))
             if os.path.exists(filepath):
                 os.remove(filepath)
                 return True
