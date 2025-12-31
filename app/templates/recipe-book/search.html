@@ -204,9 +204,10 @@
                             {{ 'Facile' if recipe['difficulty'] == 1 else 'Moyen' if recipe['difficulty'] == 2 else 'Difficile' }}
                         </span>
                     </div>
-                    <div class="card-body">
-                        <p>{{ recipe["description"] }}</p>
-                        
+                    <div class="card-body">   
+                        {% if recipe.image_url %}
+                            <img src="{{ recipe.image_url }}" alt="{{ recipe.title }}" class="recipe-image">
+                        {% endif %}                         
                         <!-- Recipe Meta -->
                         <div class="recipe-meta">
                             {% if recipe['prepTime'] and recipe['prepTime'] > 0 %}
@@ -228,6 +229,8 @@
                             {% endif %}
                         </div>
                         
+                        <p>{{ recipe["description"] }}</p>
+
                         <!-- Star Rating -->
                         <div style="margin-top: var(--spacing-sm);">
                             {% for i in range(5) %}

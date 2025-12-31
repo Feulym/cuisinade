@@ -273,6 +273,11 @@
 {% endblock %}
 
 {% block content %}
+    <!-- Recipe Image (if you add images later) -->
+    {% if recipe.image_url %}
+        <img src="{{ recipe.image_url }}" alt="{{ recipe.title }}" class="recipe-image">
+    {% endif %}
+
     <!-- Author Info -->
     <div class="author-section">
         <div class="flex-between">
@@ -285,7 +290,7 @@
                 </p>
             </div>
             {% if g.user %}
-            <form method="post" action="{{ url_for('recipeBook.toggle_favourite', id=recipe.id) }}" style="margin: 0;">
+            <form method="post" action="{{ url_for('recipeBook.toggle_favourite', id=recipe.id) }}" style="margin: 0;" enctype="multipart/form-data">
                 <button type="submit" class="btn btn-secondary favorite-btn {% if isFavourite %}favorited{% endif %}">
                     <i class="fa fa-heart"></i>
                     {% if isFavourite %}Retirer des favoris{% else %}Ajouter au favoris{% endif %}
@@ -294,11 +299,6 @@
             {% endif %}
         </div>
     </div>
-
-    <!-- Recipe Image (if you add images later) -->
-    {% if recipe.image_url %}
-    <img src="{{ recipe.image_url }}" alt="{{ recipe.title }}" class="recipe-image">
-    {% endif %}
 
     <!-- Description -->
     {% if recipe.description %}
@@ -353,7 +353,7 @@
         {% if g.user %}
         <div class="add-comment-form">
             <h3 style="margin-bottom: var(--spacing-md);">Ajouter un commentaire</h3>
-            <form method="post" action="{{ url_for('recipeBook.add_comment', id=recipe.id) }}">
+            <form method="post" action="{{ url_for('recipeBook.add_comment', id=recipe.id) }}" enctype="multipart/form-data">
                 <div class="form-group">
                     <label class="form-label">Évaluation</label>
                     <div class="comment-rating">
@@ -375,6 +375,20 @@
                     <textarea name="comment" id="comment" class="form-control" rows="4" placeholder="Share your thoughts about this recipe..." required></textarea>
                 </div>
                 
+                <!-- NOUVEAU : Upload d'image pour commentaire -->
+                <div class="form-group">
+                    <label for="comment_image" class="form-label">
+                        <i class="fa fa-camera"></i> Ajouter une photo (optionnel)
+                    </label>
+                    <input 
+                        type="file" 
+                        name="comment_image" 
+                        id="comment_image" 
+                        class="form-control" 
+                        accept="image/*"
+                    >
+                </div>
+
                 <button type="submit" class="btn btn-primary">
                     <i class="fa fa-paper-plane"></i> Ajouter votre commentaire
                 </button>
@@ -417,6 +431,11 @@
                     {% endif %}
                 </div>
                 <p style="margin: var(--spacing-sm) 0 0 0; line-height: 1.6;">{{ comment.comment }}</p>
+                
+                {% if comment.image_url %}
+                <img src="{{ comment.image_url }}" alt="Photo du commentaire" 
+                    style="max-width: 300px; border-radius: var(--radius-sm); margin-top: var(--spacing-sm);">
+                {% endif %}
             </div>
             {% endfor %}
         </div>

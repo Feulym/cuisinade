@@ -6,8 +6,12 @@ from flask import (
 
 from app.db import get_db
 from app.auth import login_required
+from app.image_handler import save_image, delete_image
 
 from werkzeug.exceptions import abort
+from werkzeug.utils import secure_filename
+
+import os
 
 NB_RECIPES_FRONTPAGE = 5
 
@@ -28,39 +32,47 @@ def index():
 @bp.route('/add-recipe', methods=('POST', 'GET'))
 @login_required
 def add_recipe():
-    db = get_db()
     if request.method == 'POST':
         title = request.form['title']
         description = request.form['description']
         author_rating = request.form['rating']
         prepTime = request.form.get('prepTime', 0)
         cookTime = request.form.get('cookTime', 0)
-        servings = request.form.get('servings', 0)
+        servings = request.form.get('servings', 1)
         difficulty = request.form.get('difficulty', 1)
-        notes = request.form.get('notes', None)
+        note = request.form.get('notes', None)
+        
+        # Gérer l'upload de l'image
+        image_url = None
+        if 'recipe_image' in request.files:
+            file = request.files['recipe_image']
+            if file.filename != '':
+                image_url = save_image(file, 'recipes', optimize=True)
+                if not image_url:
+                    flash("Format d'image non valide. Utilisez PNG, JPG ou GIF.", 'error')
         
         db = get_db()
         error = None
         
-        # Validate required fields
         if not title:
-            error = 'Title is required.'
+            error = "Le titre est requis."
         elif not description:
-            error = 'Description is required.'
+            error = "La description est requise."
         
         if error is not None:
-            flash(error)
+            flash(error, 'error')
             return render_template('recipe-book/addRecipe.html')
         
         try:
-            # STEP 1: Insert recipe FIRST and get the recipe_id
-            print(f"Inserting recipe: user_id={g.user['id']}, title={title}, description={description}, rating={author_rating}")
+            # STEP 1: Insert recipe's general info in recipes first to get recipe_id
             cursor = db.execute(
-                "INSERT INTO recipes (author_id, title, description, notes, author_grade, prepTime, cookTime, servings, difficulty) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (g.user['id'], title, description, notes, author_rating, prepTime, cookTime, servings, difficulty),
+                """INSERT INTO recipes (author_id, title, description, notes, author_grade, 
+                   prepTime, cookTime, servings, difficulty, image_url) 
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (g.user['id'], title, description, note, author_rating, 
+                 prepTime, cookTime, servings, difficulty, image_url),
             )
-            recipe_id = cursor.lastrowid  # ← GET THE RECIPE ID HERE!
-            print(f"Recipe inserted with ID: {recipe_id}")
+            recipe_id = cursor.lastrowid
             
             # STEP 2: Insert ingredients (now we have recipe_id)
             i = 0
@@ -103,26 +115,23 @@ def add_recipe():
             
             # STEP 4: Commit all changes at once
             db.commit()
-            print("All inserts successful!")
-            flash("Recette ajoutée avec succès!")
-            
+            flash("Recette ajoutée avec succès!", 'success')
             return redirect(url_for("recipeBook.index"))
             
         except Exception as e:
-            db.rollback()  # Rollback if anything fails
-            import traceback
-            traceback.print_exc()  # ⚠️ AJOUT : Pour voir l'erreur complète
+            db.rollback()
+            # Supprimer l'image si erreur
+            if image_url:
+                delete_image(image_url)
             print(f"Exception occurred: {str(e)}")
             flash(f"Erreur lors de l'ajout de la recette: {str(e)}", 'error')
             return render_template('recipe-book/addRecipe.html')
-
-    # If GET request
+    
     return render_template('recipe-book/addRecipe.html')
 
 def get_recipe(id, check_author=True):
     recipe_querry = """
-            SELECT r.id, u.username, title, description, notes, added, author_id,
-             author_grade, prepTime, cookTime, servings, difficulty
+            SELECT r.*, u.username
              FROM recipes r JOIN user u ON r.author_id = u.id
              WHERE r.id = ?
     """
@@ -237,8 +246,6 @@ def delete_comment(id, cid):
 @bp.route('/<int:id>/edit', methods=('POST', 'GET'))
 @login_required
 def edit_recipe(id):
-    # Fetch existing data using your helper function
-    # recipe, ingredients, instructions are the current state in DB
     recipe, ingredients, instructions = get_recipe(id)
 
     if request.method == 'POST':
@@ -247,29 +254,47 @@ def edit_recipe(id):
         author_rating = request.form['rating']
         prepTime = request.form.get('prepTime', 0)
         cookTime = request.form.get('cookTime', 0)
-        servings = request.form.get('servings', 0)
+        servings = request.form.get('servings', 1)
         difficulty = request.form.get('difficulty', 1)
-        notes = request.form['notes']
-
+        note = request.form.get('notes', None)
+        
+        # Gérer la nouvelle image
+        image_url = recipe['image_url']  # Garder l'ancienne par défaut
+        if 'recipe_image' in request.files:
+            file = request.files['recipe_image']
+            if file.filename != '':
+                new_image_url = save_image(file, 'recipes', optimize=True)
+                if new_image_url:
+                    # Supprimer l'ancienne image
+                    if image_url:
+                        delete_image(image_url)
+                    image_url = new_image_url
+        
+        # Vérifier si l'utilisateur veut supprimer l'image
+        if request.form.get('remove_image') == 'true':
+            if image_url:
+                delete_image(image_url)
+            image_url = None
         
         db = get_db()
         error = None
 
         if not title:
-            error = 'Title is required.'
+            error = "Le titre est requis."
         elif not description:
-            error = 'Description is required.'
+            error = "La description est requise."
 
         if error is not None:
-            flash(error)
+            flash(error, 'error')
         else:
             try:
-                # 1. Update the main recipe table
+                # 1. Update general recipe info
                 db.execute(
                     """UPDATE recipes SET title = ?, description = ?, notes = ?, author_grade = ?, 
-                       prepTime = ?, cookTime = ?, servings = ?, Difficulty = ?
+                       prepTime = ?, cookTime = ?, servings = ?, difficulty = ?, image_url = ?
                        WHERE id = ?""",
-                    (title, description, notes, author_rating, prepTime, cookTime, servings, difficulty, id)
+                    (title, description, note, author_rating, prepTime, cookTime, 
+                     servings, difficulty, image_url, id)
                 )
 
                 # 2. Update Ingredients: Delete old ones and insert new ones
@@ -313,15 +338,14 @@ def edit_recipe(id):
                     i += 1
 
                 db.commit()
-                flash("Recette mise à jour avec succès !")
+                flash("Recette mise à jour avec succès !", 'success')
                 return redirect(url_for('recipeBook.see_recipe', id=id))
 
             except Exception as e:
                 db.rollback()
                 print(f"Update failed: {str(e)}")
-                flash(f"Erreur lors de la modification: {str(e)}")
+                flash(f"Erreur lors de la modification: {str(e)}", 'error')
 
-    # For GET requests, reuse your template (ensure your template handles pre-filled values)
     return render_template('recipe-book/addRecipe.html', 
                            recipe=recipe, 
                            ingredients=ingredients, 
@@ -333,32 +357,30 @@ def edit_recipe(id):
 def delete_recipe(id):
     db = get_db()
     
-    # Get the comment to check ownership
     recipe = db.execute(
-        "SELECT author_id FROM recipes WHERE id = ?",
+        "SELECT author_id, image_url FROM recipes WHERE id = ?",
         (id,)
     ).fetchone()
     
-    # Check if comment exists
     if recipe is None:
         abort(404, f"Recipe id {id} doesn't exist.")
     
-    # Check if current user is the author (FIXED: access the field correctly)
     if recipe['author_id'] != g.user["id"]:
-        abort(403, "You don't have permission to delete this comment.")
+        abort(403, "You don't have permission to delete this recipe.")
     
-    # Delete the comment
-    db.execute(
-        "DELETE FROM recipes WHERE id = ?",
-        (id,)  # Fixed: removed extra parenthesis, should be (cid,) not (cid)
-    )
+    # Supprimer l'image associée
+    if recipe['image_url']:
+        delete_image(recipe['image_url'])
     
+    db.execute("DELETE FROM recipes WHERE id = ?", (id,))
+    db.execute("DELETE FROM comments WHERE recipe_id = ?", (id,))
+    db.execute("DELETE FROM favourites WHERE recipe_id = ?", (id,))
+    db.execute("DELETE FROM instructions WHERE recipe_id = ?", (id,))
+    db.execute("DELETE FROM ingredients WHERE recipe_id = ?", (id,))
     db.commit()
     
-    flash("Recipe deleted successfully!", "success")
-    
-    # Redirect back to the recipe page
-    return index()
+    flash("Recette supprimée avec succès!", "success")
+    return redirect(url_for('recipeBook.index'))
 
 @bp.before_app_request
 def load_logged_in_user():
@@ -568,31 +590,33 @@ def toggle_favourite(id):
 @login_required
 def add_comment(id):
     db = get_db()
-
     user_id = g.user['id']
     rating = request.form["grade"]
     comment = request.form["comment"]
-
+    
+    # Gérer l'upload de l'image du commentaire
+    image_url = None
+    if 'comment_image' in request.files:
+        file = request.files['comment_image']
+        if file.filename != '':
+            image_url = save_image(file, 'comments', optimize=True)
+    
     error = None
-    if not comment :
-        error = 'Comment is required.'
-    if not rating :
-        error = 'Rating is required'
-
-    if error :
-        flash(error)
-        # Redirect back to the recipe page instead of calling the function directly
+    if not comment:
+        error = 'Le commentaire est requis.'
+    if not rating:
+        error = 'La note est requise'
+    
+    if error:
+        flash(error, 'error')
         return redirect(url_for('recipeBook.see_recipe', id=id))
     
-    querry = """
-        INSERT INTO comments (recipe_id, author_id, comment, grade) VALUES (?, ?, ?, ?)
-    """
-
-    new_comment = db.execute(
-        querry,
-        (id, user_id, comment, rating)
+    db.execute(
+        """INSERT INTO comments (recipe_id, author_id, comment, grade, image_url) 
+           VALUES (?, ?, ?, ?, ?)""",
+        (id, user_id, comment, rating, image_url)
     )
     db.commit()
-
-    # Redirect back to the recipe page instead of calling the function directly
+    
+    flash("Commentaire ajouté avec succès!", 'success')
     return redirect(url_for('recipeBook.see_recipe', id=id))

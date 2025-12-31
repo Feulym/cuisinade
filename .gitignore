@@ -14,7 +14,7 @@ ehthumbs.db
 
 # -------- Python --------
 # Bytecode
-__pycache__/
+*/__pycache__/
 *.py[cod]
 *$py.class
 
@@ -107,6 +107,7 @@ flask-tutorial/
 
 # -------- DB --------
 instance/
+uploads/
 
 # TODO
 TODO

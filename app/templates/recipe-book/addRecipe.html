@@ -235,7 +235,7 @@
     <div style="max-width: 900px; margin: var(--spacing-xl) auto;">
         <div class="card">
             <div class="card-body">
-                <form method="post" id="recipeForm">
+                <form method="post" id="recipeForm" enctype="multipart/form-data">
                     <div class="form-group">
                         <label for="title" class="form-label">
                             <i class="fa fa-pencil"></i> Nom de la recette
@@ -295,6 +295,45 @@
                                    {{ 'required' if i == 5 }} />
                             <label class="star" for="star{{i}}" title="Rating {{i}}" aria-label="{{i}} étoiles"></label>
                             {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- NOUVEAU : Upload d'image -->
+                    <div class="form-group">
+                        <label for="recipe_image" class="form-label">
+                            <i class="fa fa-camera"></i> Photo de la recette
+                        </label>
+                        
+                        {% if recipe and recipe.image_url %}
+                        <div class="current-image-preview" style="margin-bottom: var(--spacing-md);">
+                            <img src="{{ recipe.image_url }}" alt="Photo actuelle" style="max-width: 300px; border-radius: var(--radius-md);">
+                            <div style="margin-top: var(--spacing-sm);">
+                                <label style="display: flex; align-items: center; gap: var(--spacing-xs);">
+                                    <input type="checkbox" name="remove_image" value="true">
+                                    Supprimer cette image
+                                </label>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <input 
+                            type="file" 
+                            name="recipe_image" 
+                            id="recipe_image" 
+                            class="form-control" 
+                            accept="image/png, image/jpeg, image/jpg, image/gif, image/webp"
+                            onchange="previewImage(event, 'imagePreview')"
+                        >
+                        <small class="form-text">
+                            Formats acceptés : PNG, JPG, GIF, WEBP (max 5MB)
+                        </small>
+                        
+                        <!-- Prévisualisation -->
+                        <div id="imagePreview" style="margin-top: var(--spacing-md); display: none;">
+                            <p style="font-weight: 600; color: var(--text-secondary); margin-bottom: var(--spacing-sm);">
+                                Prévisualisation :
+                            </p>
+                            <img id="previewImg" src="" alt="Prévisualisation" style="max-width: 300px; border-radius: var(--radius-md); box-shadow: var(--shadow-md);">
                         </div>
                     </div>
 
@@ -600,5 +639,26 @@
 
         document.getElementById('addIngredientBtn').addEventListener('click', () => addIngredient());
         document.getElementById('addInstructionBtn').addEventListener('click', () => addInstruction());
+    
+
+
+        // Prévisualisation d'image
+        function previewImage(event, previewId) {
+            const file = event.target.files[0];
+            const preview = document.getElementById(previewId);
+            const previewImg = document.getElementById('previewImg');
+            
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewImg.src = e.target.result;
+                    preview.style.display = 'block';
+                }
+                reader.readAsDataURL(file);
+            } else {
+                preview.style.display = 'none';
+            }
+        }
+    
     </script>
 {% endblock %}

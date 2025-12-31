@@ -59,6 +59,7 @@ CREATE TABLE comments (
   author_id INTEGER NOT NULL,
   comment TEXT NOT NULL,
   grade INTEGER NOT NULL,
+  image_url TEXT DEFAULT NULL,
   FOREIGN KEY (author_id) REFERENCES user (id),
   FOREIGN KEY (recipe_id) REFERENCES recipes (id)
 );
