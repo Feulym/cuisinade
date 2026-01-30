@@ -21,6 +21,17 @@
                     <input type="password" name="password" id="password" class="form-control" placeholder="Créez un mot de passe fort" required>
                     <small class="form-text">Au moins 6 caractères recommandés</small>
                 </div>
+                <div class="form-group">
+                    <label for="security_question" class="form-label">Question de sécurité</label>
+                    <select name="security_question" id="security_question" class="form-control" required>
+                        <option value="" disabled selected>Choisissez une question de sécurité</option>
+                        {% for question in security_questions %}
+                        <option value="{{ question }}">{{ question }}</option>
+                        {% endfor %}
+                    </select>
+                    <input type="text" name="security_answer" id="security_answer" class="form-control mt-2" placeholder="Votre réponse" required>
+                    <small class="form-text">Cette question vous aidera à récupérer votre compte en cas d'oubli de mot de passe</small>
+                </div>
                 <button type="submit" class="btn btn-primary btn-block">
                     <i class="fa fa-user-plus"></i> Créer un compte
                 </button>

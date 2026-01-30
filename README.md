@@ -1,4 +1,4 @@
-# Nexpy
+# Cuisinade V1.0.0
 
 To run the app :
 

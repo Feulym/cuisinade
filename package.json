@@ -1,8 +1,8 @@
 {
   "name": "cuisinade",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "App-livre de recette",
-  "main": "index.js",
+  "main": "__init__.py",
   "scripts": {
     "dev": "flask --app app run"
   },

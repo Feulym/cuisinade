@@ -4,7 +4,7 @@
 
 {% block styles %}
 <style>
-/* Star Rating System - Mobile Optimized */
+/* ... (Gardez vos styles CSS actuels, ils sont parfaits) ... */
 .rating {
     margin-top: var(--spacing-xs);
     margin-bottom: var(--spacing-lg);
@@ -226,7 +226,7 @@
 
 {% block header %}
     <div class="header">
-        <h1>{{ 'Modifier la Recette' if recipe else 'Nouvelle Recette !' }}</h1>
+        <h1>{{ 'Modifier la Recette' if is_edit else 'Nouvelle Recette !' }}</h1>
         <p class="header-subtitle">{{ recipe.title if recipe else 'Ajoutez votre recette favorite' }}</p>
     </div>
 {% endblock %}
@@ -240,7 +240,8 @@
                         <label for="title" class="form-label">
                             <i class="fa fa-pencil"></i> Nom de la recette
                         </label>
-                        <input type="text" name="title" id="title" class="form-control" placeholder="Ex: Tarte aux pommes" value="{{ recipe.title if recipe else '' }}" required>
+                        <input type="text" name="title" id="title" class="form-control" placeholder="Ex: Tarte aux pommes" 
+                               value="{{ recipe.title if recipe else '' }}" required>
                     </div>
                     
                     <div class="form-group">
@@ -255,21 +256,21 @@
                             <label for="prepTime" class="form-label">
                                 <i class="fa fa-clock-o"></i> Temps de préparation (min)
                             </label>
-                            <input type="number" name="prepTime" id="prepTime" class="form-control" placeholder="0" min="0" value="{{ recipe.prepTime if recipe else 0 }}">
+                            <input type="number" name="prepTime" id="prepTime" class="form-control" value="{{ recipe.prepTime if recipe else 0 }}">
                         </div>
                         
                         <div class="form-group">
                             <label for="cookTime" class="form-label">
                                 <i class="fa fa-fire"></i> Temps de cuisson (min)
                             </label>
-                            <input type="number" name="cookTime" id="cookTime" class="form-control" placeholder="0" min="0" value="{{ recipe.cookTime if recipe else 0 }}">
+                            <input type="number" name="cookTime" id="cookTime" class="form-control" value="{{ recipe.cookTime if recipe else 0 }}">
                         </div>
                         
                         <div class="form-group">
                             <label for="servings" class="form-label">
-                                <i class="fa fa-users"></i> Nombre de personne
+                                <i class="fa fa-users"></i> Personnes
                             </label>
-                            <input type="number" name="servings" id="servings" class="form-control" placeholder="0" min="1" value="{{ recipe.servings if recipe else 1 }}">
+                            <input type="number" name="servings" id="servings" class="form-control" value="{{ recipe.servings if recipe else 1 }}">
                         </div>
                     </div>
 
@@ -278,98 +279,56 @@
                             <i class="fa fa-signal"></i> Difficulté
                         </label>
                         <select name="difficulty" id="difficulty" class="form-control">
-                            <option value="1" {{ 'selected' if recipe and recipe.difficulty == 1 }}>Facile</option>
-                            <option value="2" {{ 'selected' if recipe and recipe.difficulty == 2 }}>Moyenne</option>
-                            <option value="3" {{ 'selected' if recipe and recipe.difficulty == 3 }}>Difficile</option>
+                            <option value="1" {{ 'selected' if recipe and recipe.difficulty|int == 1 }}>Facile</option>
+                            <option value="2" {{ 'selected' if recipe and recipe.difficulty|int == 2 }}>Moyenne</option>
+                            <option value="3" {{ 'selected' if recipe and recipe.difficulty|int == 3 }}>Difficile</option>
                         </select>
                     </div>
                     
                     <div class="form-group">
-                        <label class="form-label">
-                            <i class="fa fa-star"></i> Note
-                        </label>
+                        <label class="form-label"><i class="fa fa-star"></i> Note</label>
                         <div class="rating">
                             {% for i in range(5, 0, -1) %}
                             <input type="radio" id="star{{i}}" name="rating" value="{{i}}" 
-                                   {{ 'checked' if recipe and recipe.author_grade == i }} 
-                                   {{ 'required' if i == 5 }} />
-                            <label class="star" for="star{{i}}" title="Rating {{i}}" aria-label="{{i}} étoiles"></label>
+                                   {{ 'checked' if (recipe.author_grade|int if is_edit else recipe.rating|int) == i }} required />
+                            <label class="star" for="star{{i}}"></label>
                             {% endfor %}
                         </div>
                     </div>
 
-                    <!-- NOUVEAU : Upload d'image -->
                     <div class="form-group">
-                        <label for="recipe_image" class="form-label">
-                            <i class="fa fa-camera"></i> Photo de la recette
-                        </label>
-                        
-                        {% if recipe and recipe.image_url %}
-                        <div class="current-image-preview" style="margin-bottom: var(--spacing-md);">
-                            <img src="{{ recipe.image_url }}" alt="Photo actuelle" style="max-width: 300px; border-radius: var(--radius-md);">
-                            <div style="margin-top: var(--spacing-sm);">
-                                <label style="display: flex; align-items: center; gap: var(--spacing-xs);">
-                                    <input type="checkbox" name="remove_image" value="true">
-                                    Supprimer cette image
-                                </label>
-                            </div>
+                        <label for="recipe_image" class="form-label"><i class="fa fa-camera"></i> Photo</label>
+                        {% if is_edit and recipe.image_url %}
+                        <div class="current-image-preview">
+                            <img src="{{ recipe.image_url }}" alt="Photo" style="max-width: 200px; display: block; margin-bottom: 10px;">
+                            <label><input type="checkbox" name="remove_image" value="true"> Supprimer l'image</label>
                         </div>
                         {% endif %}
-                        
-                        <input 
-                            type="file" 
-                            name="recipe_image" 
-                            id="recipe_image" 
-                            class="form-control" 
-                            accept="image/png, image/jpeg, image/jpg, image/gif, image/webp"
-                            onchange="previewImage(event, 'imagePreview')"
-                        >
-                        <small class="form-text">
-                            Formats acceptés : PNG, JPG, GIF, WEBP (max 5MB)
-                        </small>
-                        
-                        <!-- Prévisualisation -->
-                        <div id="imagePreview" style="margin-top: var(--spacing-md); display: none;">
-                            <p style="font-weight: 600; color: var(--text-secondary); margin-bottom: var(--spacing-sm);">
-                                Prévisualisation :
-                            </p>
-                            <img id="previewImg" src="" alt="Prévisualisation" style="max-width: 300px; border-radius: var(--radius-md); box-shadow: var(--shadow-md);">
+                        <input type="file" name="recipe_image" id="recipe_image" class="form-control" onchange="previewImage(event, 'imagePreview')">
+                        <div id="imagePreview" style="display: none; margin-top: 10px;">
+                            <img id="previewImg" src="" style="max-width: 200px; border-radius: 8px;">
                         </div>
                     </div>
 
                     <div class="section">
-                        <h2 style="color: var(--primary-color); margin-bottom: var(--spacing-lg);">
-                            <i class="fa fa-shopping-basket"></i> Ingredients
-                        </h2>
-                        
+                        <h2 style="color: var(--primary-color);"><i class="fa fa-shopping-basket"></i> Ingrédients</h2>
                         <div id="ingredientsList"></div>
-                        
-                        <button type="button" class="add-more-btn" id="addIngredientBtn">
-                            <i class="fa fa-plus"></i> Ajouter un Ingredient
-                        </button>
+                        <button type="button" class="add-more-btn" id="addIngredientBtn"><i class="fa fa-plus"></i> Ajouter</button>
                     </div>
 
                     <div class="section">
-                        <h2 style="color: var(--primary-color); margin-bottom: var(--spacing-lg);">
-                            <i class="fa fa-list-ol"></i> Instructions
-                        </h2>
-                        
+                        <h2 style="color: var(--primary-color);"><i class="fa fa-list-ol"></i> Instructions</h2>
                         <div id="instructionsList"></div>
-                        
-                        <button type="button" class="add-more-btn" id="addInstructionBtn">
-                            <i class="fa fa-plus"></i> Ajouter une étape
-                        </button>
+                        <button type="button" class="add-more-btn" id="addInstructionBtn"><i class="fa fa-plus"></i> Ajouter</button>
                     </div>
                     
                     <div class="form-group">
-                        <label for="notes" class="form-label">
-                            <i class="fa fa-align-left"></i> Note du Chef
-                        </label>
-                        <textarea name="notes" id="notes" rows="4" class="form-control" placeholder="Avez-vous un secret Chef ?">{{ recipe.notes if recipe else '' }}</textarea>
+                        <label for="notes" class="form-label"><i class="fa fa-align-left"></i> Note du Chef</label>
+                        <textarea name="notes" id="notes" rows="3" class="form-control">{{ recipe.notes if recipe else '' }}</textarea>
                     </div>
 
-                    <button type="submit" class="btn btn-primary btn-block" style="margin-top: var(--spacing-xl);">
-                        <i class="fa fa-save"></i> {{ 'Mettre à jour la recette' if recipe else 'Ajouter la recette' }}
+                    <button type="submit" class="btn btn-primary btn-block">
+                        <i class="fa fa-save"></i> {{ 'Mettre à jour' if is_edit else 'Ajouter' }}
                     </button>
                 </form>
             </div>
@@ -377,288 +336,160 @@
     </div>
 
     <script>
-        // Global variables
         let existingIngredients = [];
         const units = ['g', 'kg', 'ml', 'L', 'cuillères à soupe', 'cuillères à café', 'pièce(s)', 'tasse(s)', 'pincée(s)'];
         let ingredientCount = 0;
         let instructionCount = 0;
 
-        // Fetch ingredients from database on page load
-        async function loadIngredients() {
+        async function initializePage() {
+            // Chargement des ingrédients pour l'autocomplétion
             try {
                 const response = await fetch("{{ url_for('recipeBook.get_ingredients') }}");
-                if (!response.ok) {
-                    throw new Error('Erreur dans la récupération des ingrédients');
-                }
-                const data = await response.json();
-                existingIngredients = data;
-                console.log('Loaded ingredients:', existingIngredients.length);
-            } catch (error) {
-                console.error('Error loading ingredients:', error);
-                existingIngredients = [];
-                alert('Erreur lors du chargement des ingrédients.');
-            }
-        }
+                existingIngredients = await response.json();
+            } catch (e) { console.error(e); }
 
-        // Initialize page
-        async function initializePage() {
-            await loadIngredients();
-            
-            // Check for edit mode data from Flask
-            const hasExistingData = {{ 'true' if ingredients or instructions else 'false' }};
-            
-            if (hasExistingData) {
-                // Populate existing ingredients
-                {% if ingredients %}
-                    {% for ing in ingredients %}
-                    addIngredient({
-                        name: "{{ ing.name|e }}",
-                        id: "{{ ing.ingredient_id }}",
-                        quantity: "{{ ing.quantity }}",
-                        unit: "{{ ing.unit }}"
-                    });
-                    {% endfor %}
-                {% endif %}
-
-                // Populate existing instructions
-                {% if instructions %}
-                    {% for inst in instructions %}
-                    addInstruction("{{ inst.instruction|replace('\n', '\\n')|replace('\r', '')|e }}");
-                    {% endfor %}
-                {% endif %}
-            } else {
-                // Default blank rows for new recipe
+            // Remplissage des données existantes (en cas d'edit OU d'erreur de formulaire)
+            {% if ingredients %}
+                {% for ing in ingredients %}
+                addIngredient({
+                    name: "{{ ing.name|e }}",
+                    id: "{{ ing.ingredient_id or '' }}",
+                    quantity: "{{ ing.quantity }}",
+                    unit: "{{ ing.unit }}"
+                });
+                {% endfor %}
+            {% else %}
                 addIngredient();
+            {% endif %}
+
+            {% if instructions %}
+                {% for inst in instructions %}
+                addInstruction("{{ inst.instruction|replace('\n', '\\n')|replace('\r', '')|e }}");
+                {% endfor %}
+            {% else %}
                 addInstruction();
-            }
+            {% endif %}
         }
 
-        // Call initialization when page loads
         document.addEventListener('DOMContentLoaded', initializePage);
 
-        // Ingredient Management
         function addIngredient(data = null) {
             ingredientCount++;
             const id = `ingredient-${ingredientCount}`;
-            
-            const ingredientHtml = `
+            const html = `
                 <div class="ingredient-item" id="${id}">
                     <div class="autocomplete-container">
-                        <input 
-                            type="text" 
-                            class="form-control ingredient-name" 
-                            placeholder="Nom de l'ingrédient"
-                            data-ingredient-id="${data ? data.id : ''}"
-                            value="${data ? data.name : ''}"
-                            required
-                        >
+                        <input type="text" class="form-control ingredient-name" placeholder="Nom" 
+                               data-ingredient-id="${data ? data.id : ''}" value="${data ? data.name : ''}" required>
                         <div class="autocomplete-list"></div>
                     </div>
-                    
-                    <input 
-                        type="number" 
-                        class="form-control input-group-small ingredient-quantity" 
-                        placeholder="Qté" 
-                        min="0"
-                        step="0.01"
-                        value="${data ? data.quantity : ''}"
-                        required
-                    >
-                    
+                    <input type="number" class="form-control ingredient-quantity" placeholder="Qté" step="0.01" value="${data ? data.quantity : ''}" required>
                     <select class="form-control ingredient-unit" required>
                         <option value="">Unité</option>
-                        ${units.map(unit => `
-                            <option value="${unit}" ${data && data.unit === unit ? 'selected' : ''}>
-                                ${unit}
-                            </option>`).join('')}
+                        ${units.map(u => `<option value="${u}" ${data && data.unit === u ? 'selected' : ''}>${u}</option>`).join('')}
                     </select>
-                    
-                    <button type="button" class="remove-btn" onclick="removeIngredient('${id}')">
-                        <i class="fa fa-trash"></i>
-                    </button>
-                </div>
-            `;
-            
-            document.getElementById('ingredientsList').insertAdjacentHTML('beforeend', ingredientHtml);
+                    <button type="button" class="remove-btn" onclick="removeIngredient('${id}')"><i class="fa fa-trash"></i></button>
+                </div>`;
+            document.getElementById('ingredientsList').insertAdjacentHTML('beforeend', html);
             setupAutocomplete(document.querySelector(`#${id} .ingredient-name`));
         }
 
-        function removeIngredient(id) {
-            document.getElementById(id).remove();
+        function addInstruction(text = "") {
+            instructionCount++;
+            const id = `instruction-${instructionCount}`;
+            const html = `
+                <div class="instruction-item" id="${id}">
+                    <div class="step-number">${instructionCount}</div>
+                    <textarea class="form-control instruction-text" rows="2" placeholder="Étape..." required>${text}</textarea>
+                    <button type="button" class="remove-btn" onclick="removeInstruction('${id}')"><i class="fa fa-trash"></i></button>
+                </div>`;
+            document.getElementById('instructionsList').insertAdjacentHTML('beforeend', html);
+            updateInstructionNumbers();
         }
 
-        // Autocomplete functionality
+        function removeIngredient(id) { document.getElementById(id).remove(); }
+        function removeInstruction(id) { 
+            document.getElementById(id).remove(); 
+            updateInstructionNumbers();
+        }
+
+        function updateInstructionNumbers() {
+            document.querySelectorAll('.instruction-item').forEach((item, index) => {
+                item.querySelector('.step-number').textContent = index + 1;
+            });
+        }
+
+        // --- Logique d'envoi du formulaire ---
+        document.getElementById('recipeForm').addEventListener('submit', function(e) {
+            // On laisse le comportement par défaut MAIS on ajoute les champs cachés avant
+            const form = this;
+            
+            document.querySelectorAll('.ingredient-item').forEach((item, idx) => {
+                const name = item.querySelector('.ingredient-name').value;
+                const id = item.querySelector('.ingredient-name').dataset.ingredientId;
+                const qty = item.querySelector('.ingredient-quantity').value;
+                const unit = item.querySelector('.ingredient-unit').value;
+
+                const createHidden = (n, v) => {
+                    const i = document.createElement('input');
+                    i.type = 'hidden'; i.name = `ingredients[${idx}][${n}]`; i.value = v;
+                    form.appendChild(i);
+                };
+                createHidden('name', name);
+                createHidden('ingredientId', id);
+                createHidden('quantity', qty);
+                createHidden('unit', unit);
+            });
+
+            document.querySelectorAll('.instruction-item').forEach((item, idx) => {
+                const text = item.querySelector('.instruction-text').value;
+                const createHidden = (n, v) => {
+                    const i = document.createElement('input');
+                    i.type = 'hidden'; i.name = `instructions[${idx}][${n}]`; i.value = v;
+                    form.appendChild(i);
+                };
+                createHidden('text', text);
+                createHidden('step', idx + 1);
+            });
+        });
+
+        // ... (Gardez vos fonctions setupAutocomplete, selectIngredient, previewImage existantes) ...
+        function previewImage(event, previewId) {
+            const file = event.target.files[0];
+            const preview = document.getElementById(previewId);
+            const previewImg = document.getElementById('previewImg');
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = e => { previewImg.src = e.target.result; preview.style.display = 'block'; };
+                reader.readAsDataURL(file);
+            }
+        }
+
         function setupAutocomplete(input) {
             const dropdown = input.nextElementSibling;
-            
             input.addEventListener('input', function() {
-                const value = this.value.toLowerCase().trim();
+                const val = this.value.toLowerCase().trim();
                 dropdown.innerHTML = '';
-                
-                if (value.length < 1) {
-                    dropdown.classList.remove('active');
-                    return;
-                }
-                
-                const matches = existingIngredients.filter(ing => 
-                    ing.name.toLowerCase().includes(value)
-                );
-                
+                if (val.length < 1) { dropdown.classList.remove('active'); return; }
+                const matches = existingIngredients.filter(ing => ing.name.toLowerCase().includes(val));
                 matches.forEach(ing => {
-                    const item = document.createElement('div');
-                    item.className = 'autocomplete-item';
-                    item.textContent = ing.name;
-                    item.dataset.id = ing.id;
-                    item.addEventListener('click', () => selectIngredient(input, ing));
-                    dropdown.appendChild(item);
+                    const div = document.createElement('div');
+                    div.className = 'autocomplete-item';
+                    div.textContent = ing.name;
+                    div.onclick = () => { input.value = ing.name; input.dataset.ingredientId = ing.id; dropdown.classList.remove('active'); };
+                    dropdown.appendChild(div);
                 });
-                
-                if (value && !matches.some(ing => ing.name.toLowerCase() === value)) {
-                    const createItem = document.createElement('div');
-                    createItem.className = 'autocomplete-item create-new';
-                    createItem.innerHTML = `<i class="fa fa-plus"></i> Créer "${value}"`;
-                    createItem.addEventListener('click', () => createNewIngredient(input, value));
-                    dropdown.appendChild(createItem);
-                }
-                
                 dropdown.classList.add('active');
             });
-            
-            document.addEventListener('click', function(e) {
-                if (!input.contains(e.target) && !dropdown.contains(e.target)) {
-                    dropdown.classList.remove('active');
-                }
-            });
         }
-
+        
         function selectIngredient(input, ingredient) {
             input.value = ingredient.name;
             input.dataset.ingredientId = ingredient.id;
             input.nextElementSibling.classList.remove('active');
         }
 
-        function createNewIngredient(input, name) {
-            if (!name || name.trim().length === 0) return;
-            
-            fetch("{{ url_for('recipeBook.create_ingredient') }}", {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: name.trim() })
-            })
-            .then(response => response.json())
-            .then(data => {
-                const newIngredient = { id: data.id, name: data.name };
-                existingIngredients.push(newIngredient);
-                selectIngredient(input, newIngredient);
-            });
-        }
-
-        // Instruction Management
-        function addInstruction(text = "") {
-            instructionCount++;
-            const id = `instruction-${instructionCount}`;
-            
-            const instructionHtml = `
-                <div class="instruction-item" id="${id}">
-                    <div class="step-number">${instructionCount}</div>
-                    <textarea 
-                        class="form-control instruction-text" 
-                        rows="3" 
-                        placeholder="Décrivez l'étape..."
-                        required
-                    >${text}</textarea>
-                    <button type="button" class="remove-btn" onclick="removeInstruction('${id}')">
-                        <i class="fa fa-trash"></i>
-                    </button>
-                </div>
-            `;
-            
-            document.getElementById('instructionsList').insertAdjacentHTML('beforeend', instructionHtml);
-            updateInstructionNumbers();
-        }
-
-        function removeInstruction(id) {
-            document.getElementById(id).remove();
-            updateInstructionNumbers();
-        }
-
-        function updateInstructionNumbers() {
-            const instructions = document.querySelectorAll('.instruction-item');
-            instructions.forEach((item, index) => {
-                const stepNumber = item.querySelector('.step-number');
-                if (stepNumber) {
-                    stepNumber.textContent = index + 1;
-                }
-            });
-        }
-
-        // Form Submission
-        document.getElementById('recipeForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const form = this;
-            
-            // Add ingredients as hidden fields
-            document.querySelectorAll('.ingredient-item').forEach((item, idx) => {
-                const name = item.querySelector('.ingredient-name').value.trim();
-                const id = item.querySelector('.ingredient-name').dataset.ingredientId;
-                const qty = item.querySelector('.ingredient-quantity').value;
-                const unit = item.querySelector('.ingredient-unit').value;
-
-                if (name && qty && unit) {
-                    [['name', name], ['ingredientId', id], ['quantity', qty], ['unit', unit]].forEach(pair => {
-                        const input = document.createElement('input');
-                        input.type = 'hidden';
-                        input.name = `ingredients[${idx}][${pair[0]}]`;
-                        input.value = pair[1] || '';
-                        form.appendChild(input);
-                    });
-                }
-            });
-            
-            // Add instructions as hidden fields
-            document.querySelectorAll('.instruction-item').forEach((item, idx) => {
-                const text = item.querySelector('.instruction-text').value.trim();
-                if (text) {
-                    const textInput = document.createElement('input');
-                    textInput.type = 'hidden';
-                    textInput.name = `instructions[${idx}][text]`;
-                    textInput.value = text;
-                    form.appendChild(textInput);
-                    
-                    const stepInput = document.createElement('input');
-                    stepInput.type = 'hidden';
-                    stepInput.name = `instructions[${idx}][step]`;
-                    stepInput.value = idx + 1;
-                    form.appendChild(stepInput);
-                }
-            });
-            
-            form.submit();
-        });
-
-        document.getElementById('addIngredientBtn').addEventListener('click', () => addIngredient());
-        document.getElementById('addInstructionBtn').addEventListener('click', () => addInstruction());
-    
-
-
-        // Prévisualisation d'image
-        function previewImage(event, previewId) {
-            const file = event.target.files[0];
-            const preview = document.getElementById(previewId);
-            const previewImg = document.getElementById('previewImg');
-            
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    previewImg.src = e.target.result;
-                    preview.style.display = 'block';
-                }
-                reader.readAsDataURL(file);
-            } else {
-                preview.style.display = 'none';
-            }
-        }
-    
+        document.getElementById('addIngredientBtn').onclick = () => addIngredient();
+        document.getElementById('addInstructionBtn').onclick = () => addInstruction();
     </script>
 {% endblock %}

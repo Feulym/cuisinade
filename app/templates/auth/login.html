@@ -27,6 +27,8 @@
         <div class="card-footer text-center">
             <p class="text-secondary">Vous n'avez pas de compte ? <a href="{{ url_for('auth.register') }}">Inscrivez-vous ici</a></p>
         </div>
+        <div class="card-footer text-center">
+            <p class="text-secondary"><a href="{{ url_for('auth.forgot_password') }}">Mot de passe oublié ?</a></p>
     </div>
 </div>
 {% endblock %}

@@ -10,7 +10,9 @@ DROP TABLE IF EXISTS favourites;
 CREATE TABLE user (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   username TEXT UNIQUE NOT NULL,
-  password TEXT NOT NULL
+  password TEXT NOT NULL,
+  security_question TEXT NOT NULL,
+  security_answer TEXT NOT NULL
 );
 
 CREATE TABLE recipes ( -- Recettes
