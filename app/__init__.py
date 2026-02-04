@@ -1,6 +1,7 @@
 import os
 
-from flask import Flask, render_template
+from flask import Flask, app, render_template
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 # Configuration des uploads
 UPLOAD_FOLDER = 'static/uploads'
@@ -14,8 +15,11 @@ os.makedirs(os.path.join('app',UPLOAD_FOLDER, 'comments'), exist_ok=True)
 def create_app(test_config=None):
     # create and configure the app
     app = Flask(__name__, instance_relative_config=True)
+    # Use the environment variable, or a fallback for local dev only
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+
     app.config.from_mapping(
-        SECRET_KEY='dev',
+        SECRET_KEY=os.environ.get('SECRET_KEY', 'default-dev-key-only'),
         DATABASE=os.path.join(app.instance_path, 'cuisinade.sqlite'),
     )
 
