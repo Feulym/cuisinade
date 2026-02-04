@@ -18,7 +18,7 @@
     <!-- Navigation -->
     <nav class="nav" style="position: sticky; top: 0; z-index: 100; margin-bottom: var(--spacing-lg);">
         <div class="nav-item">
-            <a href="/" class="nav-link" style="font-weight: 700; font-size: 1.2em;">Cuisinade</a>
+            <a href="{{ url_for('recipeBook.index') }}" class="nav-link" style="font-weight: 700; font-size: 1.2em;">Cuisinade</a>
         </div>
         <div style="flex: 1;"></div>
         {% if g.user %}
