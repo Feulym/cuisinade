@@ -1,0 +1,7 @@
+Flask==3.1.2
+Pillow==12.1.0
+gunicorn
+# These below are usually installed automatically with Flask, 
+# but keeping them doesn't hurt if you need specific versions.
+click==8.0.3
+Werkzeug==3.1.5
