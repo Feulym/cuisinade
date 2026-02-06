@@ -73,6 +73,7 @@
     grid-template-columns: 1fr auto auto auto;
     gap: var(--spacing-sm);
     align-items: start;
+    overflow: visible;
 }
 
 @media (max-width: 768px) {
@@ -157,6 +158,7 @@
 .autocomplete-container {
     position: relative;
     width: 100%;
+    overflow: visible;
 }
 
 .autocomplete-list {
@@ -340,35 +342,46 @@
         const units = ['g', 'kg', 'ml', 'L', 'cuillères à soupe', 'cuillères à café', 'pièce(s)', 'tasse(s)', 'pincée(s)'];
         let ingredientCount = 0;
         let instructionCount = 0;
+        
+        // Data passed from server
+        const initialIngredients = {{ ingredients|tojson if ingredients else '[]' }};
+        const initialInstructions = {{ instructions|tojson if instructions else '[]' }};
 
         async function initializePage() {
             // Chargement des ingrédients pour l'autocomplétion
             try {
                 const response = await fetch("{{ url_for('recipeBook.get_ingredients') }}");
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
                 existingIngredients = await response.json();
-            } catch (e) { console.error(e); }
+                console.log(`Loaded ${existingIngredients.length} ingredients`);
+            } catch (e) { 
+                console.error('Failed to load ingredients:', e);
+                existingIngredients = [];
+            }
 
             // Remplissage des données existantes (en cas d'edit OU d'erreur de formulaire)
-            {% if ingredients %}
-                {% for ing in ingredients %}
-                addIngredient({
-                    name: "{{ ing.name|e }}",
-                    id: "{{ ing.ingredient_id or '' }}",
-                    quantity: "{{ ing.quantity }}",
-                    unit: "{{ ing.unit }}"
+            if (initialIngredients.length > 0) {
+                initialIngredients.forEach(ing => {
+                    addIngredient({
+                        name: ing.name,
+                        id: ing.ingredient_id || '',
+                        quantity: ing.quantity,
+                        unit: ing.unit
+                    });
                 });
-                {% endfor %}
-            {% else %}
+            } else {
                 addIngredient();
-            {% endif %}
+            }
 
-            {% if instructions %}
-                {% for inst in instructions %}
-                addInstruction("{{ inst.instruction|replace('\n', '\\n')|replace('\r', '')|e }}");
-                {% endfor %}
-            {% else %}
+            if (initialInstructions.length > 0) {
+                initialInstructions.forEach(inst => {
+                    addInstruction(inst.instruction);
+                });
+            } else {
                 addInstruction();
-            {% endif %}
+            }
         }
 
         document.addEventListener('DOMContentLoaded', initializePage);
@@ -419,16 +432,24 @@
             });
         }
 
-        // --- Logique d'envoi du formulaire ---
         document.getElementById('recipeForm').addEventListener('submit', function(e) {
-            // On laisse le comportement par défaut MAIS on ajoute les champs cachés avant
             const form = this;
+            console.log('Form submitted');
             
-            document.querySelectorAll('.ingredient-item').forEach((item, idx) => {
-                const name = item.querySelector('.ingredient-name').value;
-                const id = item.querySelector('.ingredient-name').dataset.ingredientId;
-                const qty = item.querySelector('.ingredient-quantity').value;
-                const unit = item.querySelector('.ingredient-unit').value;
+            // Check for empty ingredients
+            const ingredientItems = document.querySelectorAll('.ingredient-item');
+            let hasInvalidIngredient = false;
+            
+            ingredientItems.forEach((item, idx) => {
+                const name = item.querySelector('.ingredient-name').value.trim();
+                const qty = item.querySelector('.ingredient-quantity').value.trim();
+                const unit = item.querySelector('.ingredient-unit').value.trim();
+                
+                console.log(`Ingredient ${idx}:`, {name, qty, unit});
+                
+                if ((name && !qty) || (name && !unit) || (!name && qty) || (!name && unit)) {
+                    hasInvalidIngredient = true;
+                }
 
                 const createHidden = (n, v) => {
                     const i = document.createElement('input');
@@ -436,7 +457,7 @@
                     form.appendChild(i);
                 };
                 createHidden('name', name);
-                createHidden('ingredientId', id);
+                createHidden('ingredientId', item.querySelector('.ingredient-name').dataset.ingredientId || '');
                 createHidden('quantity', qty);
                 createHidden('unit', unit);
             });
@@ -453,7 +474,6 @@
             });
         });
 
-        // ... (Gardez vos fonctions setupAutocomplete, selectIngredient, previewImage existantes) ...
         function previewImage(event, previewId) {
             const file = event.target.files[0];
             const preview = document.getElementById(previewId);
@@ -467,26 +487,52 @@
 
         function setupAutocomplete(input) {
             const dropdown = input.nextElementSibling;
-            input.addEventListener('input', function() {
-                const val = this.value.toLowerCase().trim();
+            
+            function updateDropdown() {
+                const val = input.value.toLowerCase().trim();
                 dropdown.innerHTML = '';
-                if (val.length < 1) { dropdown.classList.remove('active'); return; }
-                const matches = existingIngredients.filter(ing => ing.name.toLowerCase().includes(val));
+                
+                if (val.length === 0) {
+                    dropdown.classList.remove('active');
+                    return;
+                }
+                
+                const matches = existingIngredients.filter(ing => 
+                    ing.name.toLowerCase().includes(val)
+                );
+                
+                if (matches.length === 0) {
+                    dropdown.classList.remove('active');
+                    return;
+                }
+                
                 matches.forEach(ing => {
-                    const div = document.createElement('div');
-                    div.className = 'autocomplete-item';
-                    div.textContent = ing.name;
-                    div.onclick = () => { input.value = ing.name; input.dataset.ingredientId = ing.id; dropdown.classList.remove('active'); };
-                    dropdown.appendChild(div);
+                    const item = document.createElement('div');
+                    item.className = 'autocomplete-item';
+                    item.textContent = ing.name;
+                    item.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        input.value = ing.name;
+                        input.dataset.ingredientId = ing.id;
+                        dropdown.classList.remove('active');
+                    });
+                    dropdown.appendChild(item);
                 });
+                
                 dropdown.classList.add('active');
+            }
+            
+            input.addEventListener('input', updateDropdown);
+            input.addEventListener('focus', updateDropdown);
+            
+            input.addEventListener('blur', function() {
+                // Small delay to allow click on dropdown item to register
+                setTimeout(() => {
+                    if (!dropdown.matches(':hover')) {
+                        dropdown.classList.remove('active');
+                    }
+                }, 200);
             });
-        }
-        
-        function selectIngredient(input, ingredient) {
-            input.value = ingredient.name;
-            input.dataset.ingredientId = ingredient.id;
-            input.nextElementSibling.classList.remove('active');
         }
 
         document.getElementById('addIngredientBtn').onclick = () => addIngredient();

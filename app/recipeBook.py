@@ -147,7 +147,7 @@ def add_recipe():
     default_recipe = {
         'title': '',
         'description': '',
-        'rating': 0,
+        'rating': 3,
         'prepTime': 0,
         'cookTime': 0,
         'servings': 1,
@@ -173,14 +173,14 @@ def get_recipe(id, check_author=True):
         abort(403)
 
     ingredients = get_db().execute(
-        """SELECT r.id, ing_t.name, quantity, unit 
+        """SELECT r.id, ing.ingredient_id, ing_t.name, quantity, unit 
            FROM ingredients ing JOIN recipes r ON ing.recipe_id = r.id 
            JOIN ingredient_type ing_t ON ing.ingredient_id = ing_t.id 
            WHERE r.id = ?""", (id,)
     ).fetchall()
 
     instructions = get_db().execute(
-        "SELECT r.id, step, instruction FROM instructions ins WHERE ins.recipe_id = ?", (id,)
+        "SELECT id, step, instruction FROM instructions WHERE recipe_id = ?", (id,)
     ).fetchall()
 
     return recipe, ingredients, instructions
@@ -230,6 +230,24 @@ def delete_comment(id, cid):
 @login_required
 def edit_recipe(id):
     recipe_db, ingredients_db, instructions_db = get_recipe(id)
+    # Convert sqlite Row objects to plain dicts for JSON serialization in the template
+    ingredients_for_template = [
+        {
+            'ingredient_id': ing['ingredient_id'],
+            'name': ing['name'],
+            'quantity': ing['quantity'],
+            'unit': ing['unit']
+        }
+        for ing in ingredients_db
+    ]
+
+    instructions_for_template = [
+        {
+            'step': ins['step'],
+            'instruction': ins['instruction']
+        }
+        for ins in instructions_db
+    ]
 
     if request.method == 'POST':
         form_data = {
@@ -314,7 +332,7 @@ def edit_recipe(id):
             flash(f"Erreur : {str(e)}", 'error')
 
     return render_template('recipe-book/addRecipe.html', recipe=recipe_db, 
-                           ingredients=ingredients_db, instructions=instructions_db, is_edit=True)
+                           ingredients=ingredients_for_template, instructions=instructions_for_template, is_edit=True)
 
 @bp.route('/<int:id>/delete', methods=('POST', 'GET'))
 @login_required
