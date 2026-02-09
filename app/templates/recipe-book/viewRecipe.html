@@ -54,6 +54,11 @@
     background: var(--gray-100);
 }
 
+.ingredients-list li input[type="checkbox"]:checked + label {
+                        text-decoration: line-through;
+                        opacity: 0.6;
+                    }
+
 @media (hover: hover) and (pointer: fine) {
     .ingredients-list li:hover {
         background: var(--gray-100);
@@ -315,9 +320,9 @@
         <ul class="ingredients-list">
             {% for ingredient in ingredients %}
             <li>
-                <input type="checkbox" id="ingredient-{{ loop.index }}">
+                <input type="checkbox" id="ingredient-{{ loop.index }}"> 
                 <label for="ingredient-{{ loop.index }}">
-                    {{ ingredient.name }} - {{ ingredient.quantity }} {{ ingredient.unit }} 
+                    {{ ingredient.name }} - {{ ingredient.quantity | int if ingredient.quantity % 1 == 0 else ingredient.quantity }} {{ ingredient.unit }} 
                 </label>
             </li>
             {% endfor %}
