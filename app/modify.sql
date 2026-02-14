@@ -1,2 +1,1 @@
---Set is_admin to 1 for the user named "Milo"
-UPDATE user SET is_admin = 1 WHERE username = 'Milo';
+-- Write here the SQL commands to modify the database schema as needed. For example, if you want to add a new column to an existing table, you can use the following command:
