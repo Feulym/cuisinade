@@ -13,6 +13,7 @@ CREATE TABLE user (
   password TEXT NOT NULL,
   security_question TEXT NOT NULL,
   security_answer TEXT NOT NULL
+  is_admin INTEGER DEFAULT 0
 );
 
 CREATE TABLE recipes ( -- Recettes
@@ -27,6 +28,7 @@ CREATE TABLE recipes ( -- Recettes
     cookTime INTEGER DEFAULT 0,
     servings INTEGER DEFAULT 0,
     difficulty INTEGER DEFAULT 0,
+    category INTEGER DEFAULT -1,
     image_url TEXT DEFAULT NULL,
     FOREIGN KEY (author_id) REFERENCES user (id)
 );

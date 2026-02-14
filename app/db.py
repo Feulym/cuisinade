@@ -29,6 +29,11 @@ def init_db():
     with current_app.open_resource('schema.sql') as f:
         db.executescript(f.read().decode('utf8'))
 
+def modify_db():
+    db = get_db()
+
+    with current_app.open_resource('modify.sql') as f:
+        db.executescript(f.read().decode('utf8'))
 
 @click.command('init-db')
 def init_db_command():
@@ -36,6 +41,11 @@ def init_db_command():
     init_db()
     click.echo('Initialized the database.')
 
+@click.command('modify-db')
+def modify_db_command():
+    """Apply modifications to the database schema."""
+    modify_db()
+    click.echo('Modified the database schema.')
 
 sqlite3.register_converter(
     "timestamp", lambda v: datetime.fromisoformat(v.decode())
@@ -44,3 +54,4 @@ sqlite3.register_converter(
 def init_app(app):
     app.teardown_appcontext(close_db)
     app.cli.add_command(init_db_command)
+    app.cli.add_command(modify_db_command)

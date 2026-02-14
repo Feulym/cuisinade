@@ -5,7 +5,7 @@ from flask import (
 )
 
 from app.db import get_db
-from app.auth import login_required
+from app.auth import login_required, admin_required
 from app.image_handler import save_image, delete_image
 
 from werkzeug.exceptions import abort
@@ -42,6 +42,7 @@ def add_recipe():
             'cookTime': request.form.get('cookTime', 0),
             'servings': request.form.get('servings', 1),
             'difficulty': request.form.get('difficulty', 1),
+            'category': request.form.get('category', -1),
             'notes': request.form.get('notes', '')
         }
 
@@ -92,11 +93,11 @@ def add_recipe():
         try:
             cursor = db.execute(
                 """INSERT INTO recipes (author_id, title, description, notes, author_grade, 
-                   prepTime, cookTime, servings, difficulty, image_url) 
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                   prepTime, cookTime, servings, difficulty, image_url, category) 
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (g.user['id'], form_data['title'], form_data['description'], form_data['notes'], 
                  form_data['rating'], form_data['prepTime'], form_data['cookTime'], 
-                 form_data['servings'], form_data['difficulty'], image_url),
+                 form_data['servings'], form_data['difficulty'], image_url, form_data['category']),
             )
             recipe_id = cursor.lastrowid
             
@@ -147,6 +148,7 @@ def add_recipe():
     default_recipe = {
         'title': '',
         'description': '',
+        'Category': -1,
         'rating': 3,
         'prepTime': 0,
         'cookTime': 0,
@@ -258,6 +260,7 @@ def edit_recipe(id):
             'cookTime': request.form.get('cookTime', 0),
             'servings': request.form.get('servings', 1),
             'difficulty': request.form.get('difficulty', 1),
+            'category': request.form.get('category', 0),
             'notes': request.form.get('notes', '')
         }
 
@@ -306,10 +309,10 @@ def edit_recipe(id):
         try:
             db.execute(
                 """UPDATE recipes SET title=?, description=?, notes=?, author_grade=?, 
-                   prepTime=?, cookTime=?, servings=?, difficulty=?, image_url=? WHERE id=?""",
+                   prepTime=?, cookTime=?, servings=?, difficulty=?, image_url=?, category=? WHERE id=?""",
                 (form_data['title'], form_data['description'], form_data['notes'], form_data['author_grade'], 
                  form_data['prepTime'], form_data['cookTime'], form_data['servings'], 
-                 form_data['difficulty'], image_url, id)
+                 form_data['difficulty'], image_url, form_data['category'], id)
             )
 
             db.execute("DELETE FROM ingredients WHERE recipe_id = ?", (id,))
@@ -394,3 +397,237 @@ def add_comment(id):
         db.commit()
         flash("Commentaire ajouté !", 'success')
     return redirect(url_for('recipeBook.see_recipe', id=id))
+
+@bp.route('/admin')
+@login_required
+@admin_required
+def admin_page():
+    """Display admin dashboard with statistics and management options"""
+    db = get_db()
+    
+    # Get statistics
+    stats = {
+        'total_users': db.execute('SELECT COUNT(*) as count FROM user').fetchone()['count'],
+        'total_recipes': db.execute('SELECT COUNT(*) as count FROM recipes').fetchone()['count'],
+        'total_comments': db.execute('SELECT COUNT(*) as count FROM comments').fetchone()['count'],
+        'total_ingredients': db.execute('SELECT COUNT(*) as count FROM ingredient_type').fetchone()['count'],
+        'total_favourites': db.execute('SELECT COUNT(*) as count FROM favourites').fetchone()['count'],
+    }
+    
+    # Get recent recipes
+    recent_recipes = db.execute("""
+        SELECT r.id, r.title, u.username, r.added, r.author_grade
+        FROM recipes r
+        JOIN user u ON r.author_id = u.id
+        ORDER BY r.added DESC
+        LIMIT 10
+    """).fetchall()
+    
+    # Get recent comments
+    recent_comments = db.execute("""
+        SELECT c.id, c.comment, u.username, c.grade, r.title, c.recipe_id
+        FROM comments c
+        JOIN user u ON c.author_id = u.id
+        JOIN recipes r ON c.recipe_id = r.id
+        ORDER BY c.id DESC
+        LIMIT 10
+    """).fetchall()
+    
+    # Get most rated recipes
+    top_recipes = db.execute("""
+        SELECT r.id, r.title, u.username, r.author_grade, COUNT(c.id) as comment_count
+        FROM recipes r
+        JOIN user u ON r.author_id = u.id
+        LEFT JOIN comments c ON r.id = c.recipe_id
+        GROUP BY r.id
+        ORDER BY r.author_grade DESC
+        LIMIT 10
+    """).fetchall()
+    
+    # Get most active users
+    active_users = db.execute("""
+        SELECT u.id, u.username, COUNT(r.id) as recipe_count, COUNT(c.id) as comment_count
+        FROM user u
+        LEFT JOIN recipes r ON u.id = r.author_id
+        LEFT JOIN comments c ON u.id = c.author_id
+        GROUP BY u.id
+        ORDER BY (COUNT(r.id) + COUNT(c.id)) DESC
+        LIMIT 10
+    """).fetchall()
+    
+    # Get all users for management
+    all_users = db.execute("""
+        SELECT u.id, u.username, 
+               COUNT(DISTINCT r.id) as recipe_count,
+               COUNT(DISTINCT c.id) as comment_count,
+               COALESCE(u.is_admin, 0) as is_admin
+        FROM user u
+        LEFT JOIN recipes r ON u.id = r.author_id
+        LEFT JOIN comments c ON u.id = c.author_id
+        GROUP BY u.id
+        ORDER BY u.username
+    """).fetchall()
+    
+    return render_template('admin.html', 
+                         stats=stats,
+                         recent_recipes=recent_recipes,
+                         recent_comments=recent_comments,
+                         top_recipes=top_recipes,
+                         active_users=active_users,
+                         all_users=all_users)
+
+@bp.route('/admin/users/<int:user_id>/toggle-admin', methods=['POST'])
+@login_required
+@admin_required
+def toggle_user_admin(user_id):
+    """Toggle admin status for a user"""
+    db = get_db()
+    
+    # Prevent admin from removing their own admin status
+    if user_id == g.user['id']:
+        flash("Vous ne pouvez pas modifier votre propre statut administrateur.", 'error')
+        return redirect(url_for('recipeBook.admin_page'))
+    
+    user = db.execute('SELECT is_admin FROM user WHERE id = ?', (user_id,)).fetchone()
+    if user is None:
+        abort(404)
+    
+    new_status = 0 if (user['is_admin'] or 0) else 1
+    db.execute('UPDATE user SET is_admin = ? WHERE id = ?', (new_status, user_id))
+    db.commit()
+    
+    status_text = "administrateur" if new_status else "utilisateur régulier"
+    flash(f"Statut de l'utilisateur modifié en {status_text}.", 'success')
+    return redirect(url_for('recipeBook.admin_page'))
+
+@bp.route('/admin/users/<int:user_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete_user(user_id):
+    """Delete a user and all their content"""
+    db = get_db()
+    
+    # Prevent admin from deleting themselves
+    if user_id == g.user['id']:
+        flash("Vous ne pouvez pas supprimer votre propre compte.", 'error')
+        return redirect(url_for('recipeBook.admin_page'))
+    
+    user = db.execute('SELECT id FROM user WHERE id = ?', (user_id,)).fetchone()
+    if user is None:
+        abort(404)
+    
+    try:
+        # Delete user's recipes and related content
+        recipes = db.execute('SELECT id, image_url FROM recipes WHERE author_id = ?', (user_id,)).fetchall()
+        for recipe in recipes:
+            if recipe['image_url']:
+                delete_image(recipe['image_url'])
+            db.execute('DELETE FROM ingredients WHERE recipe_id = ?', (recipe['id'],))
+            db.execute('DELETE FROM instructions WHERE recipe_id = ?', (recipe['id'],))
+        
+        # Delete user's comments
+        comments = db.execute('SELECT image_url FROM comments WHERE author_id = ?', (user_id,)).fetchall()
+        for comment in comments:
+            if comment['image_url']:
+                delete_image(comment['image_url'])
+        
+        # Delete recipes first due to foreign key constraints
+        db.execute('DELETE FROM recipes WHERE author_id = ?', (user_id,))
+        db.execute('DELETE FROM comments WHERE author_id = ?', (user_id,))
+        db.execute('DELETE FROM favourites WHERE author_id = ?', (user_id,))
+        
+        # Finally delete the user
+        db.execute('DELETE FROM user WHERE id = ?', (user_id,))
+        db.commit()
+        
+        flash("Utilisateur et tous ses contenus supprimés.", 'success')
+    except Exception as e:
+        db.rollback()
+        flash(f"Erreur lors de la suppression : {str(e)}", 'error')
+    
+    return redirect(url_for('recipeBook.admin_page'))
+
+@bp.route('/admin/comments/<int:comment_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def admin_delete_comment(comment_id):
+    """Admin deletion of a comment"""
+    db = get_db()
+    comment = db.execute('SELECT image_url, recipe_id FROM comments WHERE id = ?', (comment_id,)).fetchone()
+    
+    if comment is None:
+        abort(404)
+    
+    if comment['image_url']:
+        delete_image(comment['image_url'])
+    
+    db.execute('DELETE FROM comments WHERE id = ?', (comment_id,))
+    db.commit()
+    
+    flash("Commentaire supprimé par l'administrateur.", 'success')
+    return redirect(url_for('recipeBook.admin_page'))
+
+@bp.route('/admin/recipes/<int:recipe_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def admin_delete_recipe(recipe_id):
+    """Admin deletion of a recipe"""
+    db = get_db()
+    recipe = db.execute('SELECT image_url FROM recipes WHERE id = ?', (recipe_id,)).fetchone()
+    
+    if recipe is None:
+        abort(404)
+    
+    try:
+        if recipe['image_url']:
+            delete_image(recipe['image_url'])
+        
+        db.execute('DELETE FROM ingredients WHERE recipe_id = ?', (recipe_id,))
+        db.execute('DELETE FROM instructions WHERE recipe_id = ?', (recipe_id,))
+        db.execute('DELETE FROM comments WHERE recipe_id = ?', (recipe_id,))
+        db.execute('DELETE FROM recipes WHERE id = ?', (recipe_id,))
+        db.commit()
+        
+        flash("Recette supprimée par l'administrateur.", 'success')
+    except Exception as e:
+        db.rollback()
+        flash(f"Erreur : {str(e)}", 'error')
+    
+    return redirect(url_for('recipeBook.admin_page'))
+
+@bp.route('/admin/stats/api', methods=['GET'])
+@login_required
+@admin_required
+def admin_stats_api():
+    """API endpoint for detailed statistics"""
+    db = get_db()
+    
+    # Recipes by category (if category exists)
+    recipes_by_difficulty = db.execute("""
+        SELECT difficulty, COUNT(*) as count
+        FROM recipes
+        GROUP BY difficulty
+        ORDER BY difficulty
+    """).fetchall()
+    
+    # Average recipe ratings
+    avg_rating = db.execute("""
+        SELECT AVG(author_grade) as avg_rating
+        FROM recipes
+    """).fetchone()
+    
+    # Comments statistics
+    comments_stats = db.execute("""
+        SELECT 
+            AVG(grade) as avg_grade,
+            COUNT(*) as total,
+            MAX(grade) as max_grade,
+            MIN(grade) as min_grade
+        FROM comments
+    """).fetchone()
+    
+    return jsonify({
+        'recipes_by_difficulty': [dict(row) for row in recipes_by_difficulty],
+        'avg_recipe_rating': dict(avg_rating),
+        'comments_stats': dict(comments_stats)
+    })

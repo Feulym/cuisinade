@@ -245,12 +245,40 @@
                         <input type="text" name="title" id="title" class="form-control" placeholder="Ex: Tarte aux pommes" 
                                value="{{ recipe.title if recipe else '' }}" required>
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="description" class="form-label">
                             <i class="fa fa-align-left"></i> Description
                         </label>
                         <textarea name="description" id="description" rows="4" class="form-control" placeholder="Décrivez votre recette..." required>{{ recipe.description if recipe else '' }}</textarea>
+                    </div>
+
+                    <div class="grid grid-2">
+                        <div class="form-group">
+                            <label for="category" class="form-label">
+                                <i class="fa fa-book"></i> Type de recette
+                            </label>
+                            <select name="category" id="category" class="form-control">
+                                <option value="-1" {{ 'selected' if recipe and recipe.category|int == -1 else '' }}>Non-spéficié</option>
+                                <option value="0" {{ 'selected' if recipe and recipe.category|int == 0 else '' }}>Apéro</option>
+                                <option value="1" {{ 'selected' if recipe and recipe.category|int == 1 else '' }}>Entrée</option>
+                                <option value="2" {{ 'selected' if recipe and recipe.category|int == 2 else '' }}>Plat principal</option>
+                                <option value="3" {{ 'selected' if recipe and recipe.category|int == 3 else '' }}>Dessert</option>
+                                <option value="4" {{ 'selected' if recipe and recipe.category|int == 4 else '' }}>Cocktail</option>
+                                <option value="5" {{ 'selected' if recipe and recipe.category|int == 5 else '' }}>Autre</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="difficulty" class="form-label">
+                                <i class="fa fa-signal"></i> Difficulté
+                            </label>
+                            <select name="difficulty" id="difficulty" class="form-control">
+                                <option value="1" {{ 'selected' if recipe and recipe.difficulty|int == 1 }}>Facile</option>
+                                <option value="2" {{ 'selected' if recipe and recipe.difficulty|int == 2 }}>Moyenne</option>
+                                <option value="3" {{ 'selected' if recipe and recipe.difficulty|int == 3 }}>Difficile</option>
+                            </select>
+                        </div>  
                     </div>
 
                     <div class="grid grid-3">
@@ -276,17 +304,6 @@
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label for="difficulty" class="form-label">
-                            <i class="fa fa-signal"></i> Difficulté
-                        </label>
-                        <select name="difficulty" id="difficulty" class="form-control">
-                            <option value="1" {{ 'selected' if recipe and recipe.difficulty|int == 1 }}>Facile</option>
-                            <option value="2" {{ 'selected' if recipe and recipe.difficulty|int == 2 }}>Moyenne</option>
-                            <option value="3" {{ 'selected' if recipe and recipe.difficulty|int == 3 }}>Difficile</option>
-                        </select>
-                    </div>
-                    
                     <div class="form-group">
                         <label class="form-label"><i class="fa fa-star"></i> Note</label>
                         <div class="rating">
