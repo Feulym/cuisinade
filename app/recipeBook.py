@@ -148,7 +148,7 @@ def add_recipe():
     default_recipe = {
         'title': '',
         'description': '',
-        'Category': -1,
+        'category': -1,
         'rating': 3,
         'prepTime': 0,
         'cookTime': 0,
